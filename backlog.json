@@ -872,6 +872,12 @@
           "path": "problem.md",
           "reason": "3절(lot 데이터 의미), 8절(검증 계획의 '같은 설비와 여러 resource 쌍' 사례)"
         }
+      ],
+      "feedback_log": [
+        {
+          "date": "2026-09-17",
+          "text": "리뷰(적대적): (1) 치명 - ratio 형태가 사실상 무시된다. inject가 기존에 이미 shared인 lot을 세지 않고 무조건 target_count개를 새로 덮어쓰므로, config.md가 '비율'로 정의한 필드가 '최소 건수'로만 동작. 실측: lot 200, ratio 0.05(기대 10) 요청 시 실제 shared 101/200. (2) 치명 - test_pipeline의 shared 테스트 2개가 무의미. 같은 config에서 주입 없이도 자연 발생이 95/200이라 inject_shared_eqp_cases가 no-op이어도 assertGreaterEqual(15)/(10)이 통과한다. 파이프라인 통합 경로가 사실상 미검증. (3) test_shared_eqp_case.py:89 test_injected_lots_have_correct_eligible_eqp_count는 eligible_eqp_count 구현을 그대로 다시 쓴 항등식이라 완료 기준('중복 계산 없이 정확')을 검증하지 못한다. 기대값(P0001/S0001 -> pairs 3, eligible 2)을 직접 박아야 한다. (4) T015 분포 파괴를 '범위 밖'으로 선언한 docstring은 정당화 부족. eqp_count_distribution._pairs_with_exact_eqp_count처럼 공유 eqp만 남기면 eligible_eqp_count=1로도 shared가 성립하므로 회피 가능했고, 실측 결과 {1:100,2:100} -> {1:93,2:97,3:4,5:1,7:5}로 distribution에 없는 값이 생겨 config.md의 'rare_eligible_eqp_count_types가 전담' 회계 규칙까지 깬다. (5) _util.resolve_ratio_or_count 검증 구멍: min_count 정수 검사 없음({'min_count':2.7} -> rng.sample TypeError), dict 내부 bool 미검사({'ratio':True} -> decimal.InvalidOperation), ratio>1 통과(config.md는 0~1 밖이면 에러), 오타 키 무시({'ratio':0.1,'mincount':50}). (6) has_shared_eqp_multi_resource는 docstring과 달리 resource가 서로 다른지 확인하지 않고 eqp 빈도만 센다(현재는 build_candidate_pairs dedupe 덕에 우연히 맞음). 통과 확인: 조인 규칙(한 process만) 준수, eqp_step 실제 행에서만 쌍 생성, 원본 불변, rng 공유, target 0/lot 초과/조합 없음 처리, 완료 기준 자체(중복 없는 설비 수)는 실제로 성립. 성능은 실측상 문제 없음(eqp_step 250행)."
+        }
       ]
     },
     {
