@@ -421,7 +421,7 @@
       "phase_title": "가상 스키마 정의 (회사 스키마와 구분)",
       "title": "가상 스키마 vs 회사 스키마 구분 문서화",
       "description": "가상 스키마가 개발/검증용이며 회사 데이터 구조와 무관함을 문서에 명시한다.",
-      "status": "in_progress",
+      "status": "done",
       "doc": "backlog/T010.md",
       "estimated_minutes": 15,
       "depends_on": [
@@ -437,7 +437,7 @@
       "acceptance_criteria": [
         "가상 스키마 문서 상단에 구분 문구 포함"
       ],
-      "notes": null,
+      "notes": "docs/virtual_schema/README.md 작성 완료, adversarial-reviewer 검토 반영. P1(가상 스키마 정의) phase 전체 완료.",
       "created_at": "2026-09-16",
       "updated_at": "2026-09-16",
       "plain_explanation": "T010은 T006-T009에서 생성한 4개의 가상 스키마 문서(lot_data, eqp_step_run_spec, resource_data, location_floor)가 모두 개발·검증용 가상 스키마이며 회사의 실제 데이터 구조와 무관함을 명시적으로 구분하는 작업입니다.\n\n각 문서의 상단에는 이미 '**이 문서는 개발·검증용 가상 스키마이며 회사 실제 데이터 구조가 아니다.**'라는 구분 문구와 함께, 실제 필드/키/값 체계가 미확인임을 명시하고 있습니다. 이러한 구분 문구는:\n- problem.md 2절의 '회사 데이터는 외부로 반출할 수 없으므로 외부 개발·검증에는 가상 데이터를 사용'한다는 원칙과 \n- problem.md 8절의 '가상 데이터용 스키마와 기대 결과는 실제 회사 스키마와 구분해 기록한다'는 요구사항을 \n구현하는 것입니다.\n\n완료 기준 '가상 스키마 문서 상단에 구분 문구 포함'을 확인하고, 각 문서가 일관되게 이 원칙을 따르고 있음을 검증하는 것이 이 작업의 범위입니다.",
