@@ -517,7 +517,34 @@
       ],
       "notes": "규모는 개발용 제안치이며 회사 기준 아님(8절).",
       "created_at": "2026-09-16",
-      "updated_at": "2026-09-16"
+      "updated_at": "2026-09-16",
+      "plain_explanation": "T011은 가상 데이터 생성기가 받을 config 구조를 설계하는 작업입니다.\n\nT006~T009에서 lot_data, eqp_step_run_spec, resource_data, location_floor의 스키마가 정의되었으며, 이제 이 데이터를 생성할 때 사용할 설정 파일의 구조를 먼저 정의해야 합니다.\n\n구체적으로는:\n\n1. **규모 조절**: lot 수, 설비 수, resource 수를 config에서 지정 가능하게 설계\n   - 기본값: lot 10,000 / 설비 80 / resource 24 (problem.md 8절)\n   - 배율 방식: 기본값에 배율(예: 0.1)을 곱하여 소규모 테스트 데이터도 쉽게 생성 가능\n\n2. **Seed 설정**: 재현 가능한 난수 생성을 위해 seed를 config로 지정 가능\n\n3. **테스트 케이스 비율**: problem.md 8절의 여러 검증 사례(설비 수 다양성, 우선순위 분포, 층 분포 등)를 config로 제어 가능하게 설계\n\n4. **선택 속성 분포**: problem.md 5절에서 요구하는 \"선택 속성\"(예: priority)의 분포를 config에서 지정 가능\n\n이는 실제 생성 로직 구현이 아니라, 생성기가 받을 config 파일의 구조(JSON/YAML 등의 스키마)를 설계하는 것입니다. 생성기를 어떻게 호출할지, 어떤 입력 형식으로 규모와 분포를 지정할지를 문서로 정의합니다.\n\n완료 기준은 \"규모, seed, 각 케이스 비율을 config로 조절 가능\"이므로, config 설계 문서에 이 세 부분이 명확히 표현되어야 합니다.",
+      "related_files": [
+        {
+          "path": "problem.md",
+          "reason": "problem.md 3절(lot_data 의미), 5절(선택 속성과 분포), 8절(가상 데이터 규모 기본값과 검증 사례)"
+        },
+        {
+          "path": "docs/virtual_schema/lot_data.md",
+          "reason": "T006 산출물 - lot의 필드 구조와 candidate_pairs, attributes 정의"
+        },
+        {
+          "path": "docs/virtual_schema/eqp_step_run_spec.md",
+          "reason": "T007 산출물 - 공정·step·resource·설비 관계 참조 테이블 구조"
+        },
+        {
+          "path": "docs/virtual_schema/resource_data.md",
+          "reason": "T008 산출물 - resource id와 속성 정의"
+        },
+        {
+          "path": "docs/virtual_schema/location_floor.md",
+          "reason": "T009 산출물 - lot 현재 위치와 설비 층 연결 구조"
+        },
+        {
+          "path": "docs/virtual_schema/README.md",
+          "reason": "4개 스키마 문서의 통합 안내 및 문서 간 관계 설명"
+        }
+      ]
     },
     {
       "id": "T012",
