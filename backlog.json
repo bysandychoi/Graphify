@@ -110,7 +110,7 @@
       "phase_title": "저장소 최소 하네스",
       "title": "AGENTS.md 작성 (공통 작업 규칙)",
       "description": "회사 데이터 반출 금지, 가상 스키마와 회사 스키마 구분, 추정 금지 원칙, 최소 의존성 원칙 등 공통 규칙을 정리한다.",
-      "status": "todo",
+      "status": "done",
       "doc": "backlog/T003.md",
       "estimated_minutes": 30,
       "depends_on": [
@@ -125,7 +125,7 @@
         "모르는 구조를 추정해 확정하지 않는다는 원칙 명시",
         "Claude 개발 / Codex 실행 구분 명시"
       ],
-      "notes": null,
+      "notes": "핵심 원칙 절(회사 데이터 미반출, 추정 금지, Claude 개발/Codex 실행 구분)이 이미 AGENTS.md에 명시되어 있음을 확인 후 완료 처리.",
       "created_at": "2026-09-16",
       "updated_at": "2026-09-16"
     },
@@ -135,7 +135,7 @@
       "phase_title": "저장소 최소 하네스",
       "title": "CLAUDE.md 작성 (AGENTS.md 참조)",
       "description": "Claude 세션이 AGENTS.md의 공통 규칙을 먼저 읽도록 안내하는 짧은 문서를 작성한다.",
-      "status": "todo",
+      "status": "done",
       "doc": "backlog/T004.md",
       "estimated_minutes": 15,
       "depends_on": [
@@ -148,7 +148,7 @@
         "AGENTS.md를 명시적으로 가리킴",
         "중복 내용 없음"
       ],
-      "notes": null,
+      "notes": "CLAUDE.md에서 규칙 본문을 옮겨 적던 3개 불릿을 제거하고 AGENTS.md/problem.md/backlog.json 위치 안내만 남겨 '중복 내용 없음' 기준을 충족시킨 뒤 완료 처리.",
       "created_at": "2026-09-16",
       "updated_at": "2026-09-16"
     },
