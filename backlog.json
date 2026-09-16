@@ -730,7 +730,34 @@
       ],
       "notes": null,
       "created_at": "2026-09-16",
-      "updated_at": "2026-09-16"
+      "updated_at": "2026-09-17",
+      "plain_explanation": "각 lot마다 현재 처리할 step에서 사용 가능한 (설비, resource) 쌍들을 만드는 작업입니다.\n\n**구체적으로 뭘 하나요?**\n1. config에서 생성할 lot 수를 받습니다\n2. 각 lot마다:\n   - 처리할 step을 정합니다 (S01, S02 등)\n   - T013이 생성한 eqp_step에서 해당 (공정, step, resource) 행들을 찾습니다\n   - 각 행의 eligible_eqp_ids(가능 설비 목록)와 resource를 조합해 (설비, resource) 쌍을 만듭니다\n   - 이 쌍들을 lot의 candidate_pairs에 넣습니다\n3. 각 lot마다 candidate_pairs에 나타나는 중복 없는 설비의 개수를 eligible_eqp_count로 계산합니다\n   - (M01,R01), (M01,R02) → eligible_eqp_count = 1 (M01만)\n   - (M01,R01), (M02,R02) → eligible_eqp_count = 2 (M01, M02)\n\n**주의할 점:**\n- 명시된 쌍만 만듭니다. (M01,R01), (M02,R02)가 있어도 (M01,R02)를 자동으로 만들면 안 됩니다\n- candidate_pairs의 중복 여부와 정렬은 구현 시 정의합니다\n\n**완료 기준:**\n- eligible_eqp_count가 candidate_pairs의 중복 없는 eqp 개수와 항상 일치\n- 암시된 쌍이 없음",
+      "related_files": [
+        {
+          "path": "generator/master.py",
+          "reason": "T012 산출물(eqp_floor/resources) 구조 참고"
+        },
+        {
+          "path": "generator/eqp_step.py",
+          "reason": "T013 산출물(eligible_eqp_ids) 구조와 생성 방식 참고"
+        },
+        {
+          "path": "docs/virtual_schema/lot_data.md",
+          "reason": "candidate_pairs와 eligible_eqp_count 정의 확인"
+        },
+        {
+          "path": "docs/virtual_schema/eqp_step_run_spec.md",
+          "reason": "eqp_step 스키마와 (process, step, resource) 조회 방식"
+        },
+        {
+          "path": "docs/generator/config.md",
+          "reason": "scale.lot_count, step_count 등 config 구조"
+        },
+        {
+          "path": "problem.md",
+          "reason": "3절에서 lot과 가능 쌍의 의미 정의"
+        }
+      ]
     },
     {
       "id": "T015",
