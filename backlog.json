@@ -223,6 +223,12 @@
           "path": "docs/virtual_schema/lot_data.md",
           "reason": "가상 lot_data 스키마 정의 산출물(이 문서)"
         }
+      ],
+      "feedback_log": [
+        {
+          "date": "2026-09-16",
+          "text": "리뷰(라운드1): AC2는 충족(파생값 표+M03 반례). AC1은 반쪽 — 쌍을 목록으로 적기만 했고 튜플 동일성 의미(동일 쌍 중복 허용? 순서 의미? 빈 목록 허용?)가 미정의. problem.md 144가 '빈 가능 쌍/중복 ID'를 테스트 대상으로 명시했는데 문서는 무언급. [심각] 공정(공정·step) 키 부재: problem.md 38/41은 eqp_step이 '공정·step별'이고 연결 키는 미확인이라 했는데, 스키마는 current_step 단독만 두고 '연결 키 미확인'도 안 적어 T007/T020/T044/T046이 step 단독 조인을 기정사실로 삼게 만듦 = 회사 연결 키 추정 확정. attributes 슬롯이 무제약이라 eqp_count를 넣는 걸 막는 문장이 없어 AC2가 서술문에 그침. 예시 JSON의 priority:'P1'은 미확인 값 체계를 구체값으로 박아 T022/T027이 복사할 위험(+problem.md 78 '실제로 없는 속성은 사용하지 않는다' 미인용). 중첩 JSON 구조를 사실상 확정했으나 problem.md 182 '입력 파일 형식 미확인'/long-format 가능성 무언급. eqp/resource 원소 타입·참조 대상, lot_id 유일성 미기재. AGENTS.md 문서 구조 표에 docs/ 트리 미등록(저장소 내 docs/ 참조 0건). 본문에 T007/T009 backlog id 하드코딩. 워킹트리에 무관한 tools/backlog_dashboard.html 수정 혼재 — 커밋 분리 필요."
+        }
       ]
     },
     {
