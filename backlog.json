@@ -667,7 +667,7 @@
       "phase_title": "가상 데이터 생성기",
       "title": "eqp_step 가능 쌍 생성 로직",
       "description": "공정·step별로 resource가 가능한 설비 집합을 생성한다 (동일 step 내 resource별로 다른 설비 집합 허용).",
-      "status": "in_progress",
+      "status": "done",
       "doc": "backlog/T013.md",
       "estimated_minutes": 30,
       "depends_on": [
