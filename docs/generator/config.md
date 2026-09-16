@@ -83,12 +83,16 @@
 | --- | --- | --- | --- |
 | `seed` | int | 필수 | 난수 생성 seed. 같은 config + 같은 seed는 같은 데이터를 만들어야 한다(재현성). |
 
-생성기가 seed 하나로 모든 난수 소비를 결정적으로 재현하는 방법(단일
-`random.Random(seed)` 인스턴스를 전역으로 공유할지, 단계별로 파생
-seed를 쓸지)은 이 문서가 정하지 않는다 — T012 이후 실제 구현에서
-정한다. problem.md 10절 "표본 변경과 재현을 위한 seed 설정·기록
-방식"은 **표본 선택** 쪽 미결 사항이며, 이 문서가 다루는 생성기 seed와는
-별개다.
+생성기가 seed 하나로 모든 난수 소비를 결정적으로 재현하는 방법은
+T012 구현이 정했다: **단일 `random.Random(seed)` 인스턴스를 생성기
+전체가 공유한다**(`generator/master.py`) — 이후 단계(T013 이후)도
+같은 인스턴스를 이어받아 쓴다고 가정한다. 이 선택의 결과로, 생성
+순서 중간에 난수 소비 지점을 추가/제거하면(예: 새 케이스 주입 로직
+추가) 그 뒤에 나오는 모든 데이터가 같은 seed에서도 달라진다 — 이는
+받아들인 트레이드오프이며, 단계별 파생 seed로 바꾸려면 이 문서와
+`generator/master.py`를 함께 갱신해야 한다. problem.md 10절 "표본
+변경과 재현을 위한 seed 설정·기록 방식"은 **표본 선택** 쪽 미결
+사항이며, 이 문서가 다루는 생성기 seed와는 별개다.
 
 ## `scale`
 
@@ -104,10 +108,12 @@ seed를 쓸지)은 이 문서가 정하지 않는다 — T012 이후 실제 구�
 | `scale.factor` | float | 선택 | `scale.lot_count`에만 곱하는 배율(위 "유효 lot 수" 정의 참고). 예: `0.01`이면 lot 10,000 → 100인 소규모 데이터(T023)를 만든다. |
 
 각 `scale.*_count` 필드의 정확한 기본값(제안치 외의 나머지)은 이
-문서가 정하지 않으며, T012 구현 시 명시적인 기본 config 파일로
-정한다 — 이 표는 "기본값 없음(필수)"으로 두어, config를 안 주면
-생성기가 임의로 추측하지 않고 에러를 내도록 한다(아래 "잘못된
-config" 절 참고).
+표가 아니라 `generator/default_config.json`(T012 구현이 만든 명시적
+기본 config 파일)에 있다 — 이 표는 "기본값 없음(필수)"으로 두어,
+config를 안 주면 생성기가 임의로 추측하지 않고 에러를 내도록 한다
+(아래 "잘못된 config" 절 참고). `default_config.json`의 값은
+`floor_count: 5`/`location_count: 30`/`process_count: 6`/
+`step_count: 20`로, 이 문서의 "예시" 절 전체 규모 예시와 같다.
 
 **`scale.factor`는 `lot_count`에만 적용되고, `eqp_count`/`resource_count`/
 `floor_count`/`location_count`/`process_count`/`step_count`에는 적용되지

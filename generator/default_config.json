@@ -1,0 +1,12 @@
+{
+  "seed": 42,
+  "scale": {
+    "lot_count": 10000,
+    "eqp_count": 80,
+    "resource_count": 24,
+    "floor_count": 5,
+    "location_count": 30,
+    "process_count": 6,
+    "step_count": 20
+  }
+}
