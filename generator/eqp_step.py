@@ -106,7 +106,14 @@ def generate_eqp_step_data(
     """rng를 안 넘기면 이 함수가 새 random.Random(config["seed"])을 만든다 —
     단독/테스트 호출용 편의이며, 실제 파이프라인(generator/pipeline.py)은
     거기서 만든 rng를 이 함수와 다른 모든 단계에 그대로 이어서 넘긴다
-    (생성기 전체가 seed 하나를 공유한다는 config.md의 계약)."""
+    (생성기 전체가 seed 하나를 공유한다는 config.md의 계약).
+
+    반환값에 "eqp_step"뿐 아니라 이 함수가 만든 "process_ids"/"step_ids"도
+    함께 담는다 — 뒤 단계(T014 이후)가 같은 값을 다시 만들어 쓰면, 두
+    자리에서 각각 만든 목록이 우연히 같은 함수 호출에 의존하는 암묵적
+    결합이 생긴다(한쪽만 바뀌면 조용히 어긋난다). 호출자는 이 값을
+    데이터 테이블(eqp_step)과 구분해서 다뤄야 한다 — 파이프라인 출력에
+    그대로 병합하지 않는다."""
     scale = config["scale"]
     if rng is None:
         rng = random.Random(config["seed"])
@@ -117,4 +124,6 @@ def generate_eqp_step_data(
             process_ids=process_ids, step_ids=step_ids,
             resource_ids=resource_ids, eqp_ids=eqp_ids, rng=rng,
         ),
+        "process_ids": process_ids,
+        "step_ids": step_ids,
     }

@@ -483,6 +483,15 @@ T054가 고를 수 있는 여러 처리 정책 후보 중 하나를 이 config
 - `case_ratios.lot_eqp_step_mismatch`가 만드는 불일치의 정확한 형태
   구분 — `eqp_step_run_spec.md`의 "빈 배열 vs 행 부재", "`step_id`
   단독 조회의 비결정성" 미결 사항이 먼저 정해져야 한다(위 표 참고).
+  **참고로 T014 구현(`generator/lot_data.py`)은 이 미결 사항 자체를
+  풀지 않으면서 가상 데이터를 만들기 위해, lot마다 `process_id` 하나와
+  `step_id` 하나를 함께 뽑아 그 `(process_id, step_id)` 조합의
+  `eqp_step` 행만으로 `candidate_pairs`를 만드는 자체 규칙을 썼다 —
+  이 방식은 "step_id 단독 조인"과 "(process,step) 조합 조인" 두
+  해석 중 어느 쪽과도 모순되지 않는다(자세한 근거는 해당 모듈
+  docstring 참고). 이는 생성기가 가상 데이터를 만들 때 쓰는 선택일
+  뿐, 회사 실제 조인 키가 무엇인지에 대한 이 미결 사항을 대신
+  확정하는 것이 아니다.**
 - `resource_data.md`가 정의한 resource 속성(예: `resource_type`)의
   분포를 통제하는 `case_ratios` 필드, 그리고 (공유 설비 케이스가
   아닌) 일반적인 `candidate_pairs`당 쌍 수 분포를 통제하는 필드 —
