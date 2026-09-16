@@ -634,7 +634,26 @@
       ],
       "notes": null,
       "created_at": "2026-09-16",
-      "updated_at": "2026-09-16"
+      "updated_at": "2026-09-17",
+      "plain_explanation": "T012는 가상 제조 데이터 생성 프로젝트의 설비·리소스 마스터를 생성하는 작업입니다.\n\n구체적으로:\n\n1. **생성 대상:**\n   - 설비(eqp): config에서 지정된 수만큼 생성(기본값 80대). 각 설비에 고유한 ID와 층 번호를 부여합니다.\n   - 리소스(resource): config에서 지정된 수만큼 생성(기본값 24개). 각 리소스에 고유한 ID를 부여합니다.\n   - 층 정보: config의 floor_count로 지정된 층 수 범위 내에서 각 설비에 층 번호를 배정합니다.\n\n2. **생성 결과 (출력 데이터):**\n   - eqp_floor: 각 설비의 ID와 층 정보를 담은 테이블\n   - resource_data: 각 리소스의 ID(및 선택적 속성)을 담은 테이블\n\n3. **완료 기준:**\n   - 설비 ID/층, 리소스 ID가 모두 중복 없이 생성됨\n   - 생성된 설비/리소스 수가 config 지정값과 일치함\n   - 각 설비의 층 번호가 1 이상 floor_count 이하의 유효한 범위 내에 있음",
+      "related_files": [
+        {
+          "path": "docs/generator/config.md",
+          "reason": "T011 산출물 - 생성기가 받을 config 구조(scale.eqp_count, scale.resource_count, scale.floor_count)"
+        },
+        {
+          "path": "docs/virtual_schema/location_floor.md",
+          "reason": "T009 산출물 - eqp_floor 테이블 구조와 설비 층 정의"
+        },
+        {
+          "path": "docs/virtual_schema/resource_data.md",
+          "reason": "T008 산출물 - resource_data 스키마 구조"
+        },
+        {
+          "path": "problem.md",
+          "reason": "문제 정의 8절(가상 데이터 검증 계획) - 규모 기본값(설비 80, resource 24) 근거"
+        }
+      ]
     },
     {
       "id": "T013",
