@@ -46,7 +46,26 @@
       ],
       "notes": "코드/문서만으로 인수인계 가능해야 함(9절).",
       "created_at": "2026-09-16",
-      "updated_at": "2026-09-16"
+      "updated_at": "2026-09-16",
+      "plain_explanation": "Graphify 프로젝트를 새로운 개발자나 실행 환경(Codex)에 인수인계할 수 있도록, README/AGENTS/CLAUDE/HANDOFF 4개 문서의 역할과 목차를 정의하는 작업. 현재 AGENTS.md와 CLAUDE.md는 작성돼 있으나 README는 거의 비어있고 HANDOFF는 미작성 상태. 각 문서의 목적, 포함할 섹션, 상호 참조 관계를 명시해서 어느 문서를 먼저 읽어야 하는지, 공통 규칙의 단일 출처가 무엇인지 명확히 한다.",
+      "related_files": [
+        {
+          "path": "AGENTS.md",
+          "reason": "공통 규칙 단일 출처, 이미 작성됨"
+        },
+        {
+          "path": "CLAUDE.md",
+          "reason": "AGENTS.md를 참조하는 가이드, 이미 작성됨"
+        },
+        {
+          "path": "README.md",
+          "reason": "프로젝트 개요 (거의 비어있음)"
+        },
+        {
+          "path": "problem.md",
+          "reason": "9절에서 문서화와 인수인계 요구사항 정의"
+        }
+      ]
     },
     {
       "id": "T002",
