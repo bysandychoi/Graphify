@@ -359,7 +359,7 @@
       "phase_title": "가상 스키마 정의 (회사 스키마와 구분)",
       "title": "가상 위치·층 연결 스키마 정의",
       "description": "lot 현재 위치, 설비 층을 연결하는 별도 테이블을 가상으로 정의한다. 위치→층 산출 방식은 가상 규칙으로 명시한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T009.md",
       "estimated_minutes": 30,
       "depends_on": [],
