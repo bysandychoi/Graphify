@@ -783,7 +783,38 @@
       ],
       "notes": "검증 사례: '설비 수가 다양한 lot' (8절 표).",
       "created_at": "2026-09-16",
-      "updated_at": "2026-09-16"
+      "updated_at": "2026-09-17",
+      "plain_explanation": "각 lot을 생성할 때 설비 수(eligible_eqp_count) 분포를 지정된 비율대로 맞추는 작업입니다.\n\n**현재 상황:**\nT014(lot_data 가능 쌍 생성)에서는 각 lot의 current_step을 무작위로 선택하고, 그 step에 해당하는 candidate_pairs를 만듭니다. 이 결과 eligible_eqp_count(할당 가능 설비 수)는 균형 없이 분포됩니다.\n\n**T015가 해야 할 일:**\n- config의 `case_ratios.eligible_eqp_count_distribution`에서 읽은 분포(예: {\"1\": 0.2, \"2\": 0.6, \"3\": 0.2})에 따라\n- 생성할 lot_count개 중에서 각 eligible_eqp_count별 lot 개수를 결정하고\n- 각 lot마다 원하는 설비 수를 만족하는 candidate_pairs가 되도록 조정하기\n\n**구체 예시:**\n- 10,000개 lot을 생성하되\n- 설비 수 1개인 lot: 2,000개 (20%)\n- 설비 수 2개인 lot: 6,000개 (60%)\n- 설비 수 3개인 lot: 2,000개 (20%)\n이렇게 분포되도록 생성\n\n**주의:**\n- 설비 수 0인 lot(candidate_pairs가 빈 배열)도 가능 (config에 \"0\" 키 포함 시)\n- 키 값은 scale.eqp_count(전체 설비 수) 이하여야 함\n- 이전 T013·T014 산출물 구조를 활용해서 구현\n\n**완료 기준:**\n생성된 데이터의 설비 수별 히스토그램이 config 분포를 따름",
+      "related_files": [
+        {
+          "path": "generator/lot_data.py",
+          "reason": "T014 산출물 수정 대상, generate_lot_data()에서 eligible_eqp_count 분포 적용"
+        },
+        {
+          "path": "docs/generator/config.md",
+          "reason": "eligible_eqp_count_distribution 필드 정의 및 검증 규칙"
+        },
+        {
+          "path": "docs/virtual_schema/lot_data.md",
+          "reason": "eligible_eqp_count 파생값 정의 (candidate_pairs의 중복 없는 eqp 개수)"
+        },
+        {
+          "path": "generator/eqp_step.py",
+          "reason": "T013 산출물, 각 step의 eligible_eqp_ids 구조 참고"
+        },
+        {
+          "path": "generator/pipeline.py",
+          "reason": "생성 파이프라인 구조와 단계 간 데이터 전달 방식"
+        },
+        {
+          "path": "problem.md",
+          "reason": "8절의 검증 사례 '설비 수가 다양한 lot'"
+        },
+        {
+          "path": "generator/_util.py",
+          "reason": "effective_lot_count() 유틸함수로 유효 lot 수 계산"
+        }
+      ]
     },
     {
       "id": "T016",
