@@ -33,7 +33,7 @@
       "phase_title": "저장소 최소 하네스",
       "title": "저장소 문서 구조 설계",
       "description": "README/AGENTS/CLAUDE/HANDOFF의 역할 분담과 최소 하네스 구조를 정의한다. 공통 규칙은 AGENTS.md에 모으고 CLAUDE.md는 이를 참조하도록 한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T001.md",
       "estimated_minutes": 30,
       "depends_on": [],
