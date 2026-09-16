@@ -185,7 +185,7 @@
       "phase_title": "저장소 최소 하네스",
       "title": "HANDOFF.md 초안 작성",
       "description": "현재 상태, 검증 결과(현재는 없음), 가정, 다음 작업, 미결 사항을 기록한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T005.md",
       "estimated_minutes": 30,
       "depends_on": [
