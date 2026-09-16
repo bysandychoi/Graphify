@@ -719,7 +719,7 @@
       "phase_title": "가상 데이터 생성기",
       "title": "lot_data 가능 쌍 생성 로직",
       "description": "eqp_step을 참고해 lot별 (eqp, resource) 가능 쌍을 생성한다. 설비 수는 쌍의 중복 없는 eqp 집합 크기로 계산한다.",
-      "status": "in_progress",
+      "status": "done",
       "doc": "backlog/T014.md",
       "estimated_minutes": 30,
       "depends_on": [
