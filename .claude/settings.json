@@ -28,6 +28,15 @@
             "command": "python tools/hooks/guard_backlog_bash.py 2>/dev/null || true"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/hooks/guard_task_in_progress.py 2>/dev/null || true"
+          }
+        ]
       }
     ],
     "PostToolUse": [

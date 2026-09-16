@@ -5,6 +5,8 @@
 의존성: Python 표준 라이브러리만 사용.
 backlog.json의 status_legend / phase_legend를 그대로 검증 기준으로 사용한다.
 (값을 이 스크립트에 중복 정의하지 않음 — legend는 backlog.json이 유일한 출처.)
+데이터 I/O·검증은 backlog_core, 문서 렌더링은 backlog_docs, 활성 작업 추적은
+backlog_state로 분리했다 (이 파일은 argparse 배선과 명령 핸들러만 담당).
 
 사용 예:
     python tools/backlog_cli.py list
@@ -14,142 +16,21 @@ backlog.json의 status_legend / phase_legend를 그대로 검증 기준으로 �
         --acceptance "기준1" --acceptance "기준2" --depends-on T013,T014
     python tools/backlog_cli.py update T014 --status in_progress
     python tools/backlog_cli.py set-status T014 review
+    python tools/backlog_cli.py start T014
+    python tools/backlog_cli.py active
     python tools/backlog_cli.py validate
 """
 import argparse
 import json
-import os
-import re
 import sys
-import tempfile
-from datetime import date
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-BACKLOG_PATH = ROOT / "backlog.json"
-ID_PATTERN = re.compile(r"^T(\d+)$")
+import backlog_core as core
+import backlog_docs as docs
+import backlog_state as state
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8")
-
-
-def today() -> str:
-    return date.today().isoformat()
-
-
-def load_backlog() -> dict:
-    if not BACKLOG_PATH.exists():
-        sys.exit(f"backlog.json을 찾을 수 없습니다: {BACKLOG_PATH}")
-    with open(BACKLOG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_backlog(data: dict) -> None:
-    # 저장 중 프로세스가 죽어도 backlog.json이 깨지지 않도록 임시 파일에 쓰고 교체한다.
-    fd, tmp_path = tempfile.mkstemp(dir=str(ROOT), suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            f.write("\n")
-        os.replace(tmp_path, BACKLOG_PATH)
-    except BaseException:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-        raise
-
-
-def find_task(data: dict, task_id: str) -> dict:
-    for t in data["tasks"]:
-        if t["id"] == task_id:
-            return t
-    sys.exit(f"작업 id를 찾을 수 없습니다: {task_id}")
-
-
-def next_id(data: dict) -> str:
-    nums = []
-    width = 3
-    for t in data["tasks"]:
-        m = ID_PATTERN.match(t["id"])
-        if m:
-            nums.append(int(m.group(1)))
-            width = max(width, len(m.group(1)))
-    n = (max(nums) + 1) if nums else 1
-    return f"T{n:0{width}d}"
-
-
-def doc_markdown(task: dict, status_legend: dict, phase_legend: dict) -> str:
-    deps = ", ".join(task["depends_on"]) if task["depends_on"] else "없음"
-    sections = (
-        ", ".join(f"{s}절" for s in task["problem_md_sections"])
-        if task["problem_md_sections"]
-        else "-"
-    )
-    acc = "\n".join(f"- {a}" for a in task["acceptance_criteria"]) or "- (미정)"
-    phase_title = phase_legend.get(task["phase"], task["phase"])
-    status_title = status_legend.get(task["status"], task["status"])
-    lines = [
-        f"# {task['id']} {task['title']}",
-        "",
-        f"- 단계: {task['phase']} ({phase_title})",
-        f"- 상태: {task['status']} ({status_title})",
-        f"- 예상 소요: {task['estimated_minutes']}분",
-        f"- 선행 작업: {deps}",
-        f"- 참고 problem.md: {sections}",
-        "",
-        "## 설명",
-        "",
-        task["description"],
-        "",
-        "## 완료 기준",
-        "",
-        acc,
-    ]
-    if task.get("notes"):
-        lines += ["", "## 비고", "", task["notes"]]
-    lines.append("")
-    return "\n".join(lines)
-
-
-def write_doc(data: dict, task: dict) -> None:
-    doc_path = ROOT / task["doc"]
-    doc_path.parent.mkdir(parents=True, exist_ok=True)
-    doc_path.write_text(
-        doc_markdown(task, data["status_legend"], data["phase_legend"]),
-        encoding="utf-8",
-    )
-
-
-def parse_csv(value: str) -> list:
-    if not value:
-        return []
-    return [v.strip() for v in value.split(",") if v.strip()]
-
-
-def require_status(data: dict, status: str) -> None:
-    if status not in data["status_legend"]:
-        valid = ", ".join(data["status_legend"].keys())
-        sys.exit(f"알 수 없는 status '{status}'. 사용 가능: {valid}")
-
-
-def require_phase(data: dict, phase: str, new_phase_title: str | None) -> None:
-    if phase in data["phase_legend"]:
-        return
-    if new_phase_title:
-        data["phase_legend"][phase] = new_phase_title
-        return
-    valid = ", ".join(data["phase_legend"].keys())
-    sys.exit(
-        f"알 수 없는 phase '{phase}'. 사용 가능: {valid}\n"
-        f"새 phase를 추가하려면 --new-phase-title 을 함께 지정하세요."
-    )
-
-
-def require_depends_exist(data: dict, ids: list) -> None:
-    existing = {t["id"] for t in data["tasks"]}
-    missing = [i for i in ids if i not in existing]
-    if missing:
-        sys.exit(f"존재하지 않는 depends-on id: {', '.join(missing)}")
 
 
 # ---------------------------------------------------------------------------
@@ -192,9 +73,9 @@ def cmd_list(args, data):
 
 
 def cmd_show(args, data):
-    t = find_task(data, args.id)
+    t = core.find_task(data, args.id)
     print(json.dumps(t, ensure_ascii=False, indent=2))
-    doc_path = ROOT / t["doc"]
+    doc_path = core.ROOT / t["doc"]
     print(f"\n--- 문서 ({doc_path}) ---\n")
     if doc_path.exists():
         print(doc_path.read_text(encoding="utf-8"))
@@ -203,16 +84,16 @@ def cmd_show(args, data):
 
 
 def cmd_add(args, data):
-    require_status(data, args.status)
-    require_phase(data, args.phase, args.new_phase_title)
-    depends_on = parse_csv(args.depends_on)
-    require_depends_exist(data, depends_on)
-    sections = parse_csv(args.sections)
+    core.require_status(data, args.status)
+    core.require_phase(data, args.phase, args.new_phase_title)
+    depends_on = core.parse_csv(args.depends_on)
+    core.require_depends_exist(data, depends_on)
+    sections = core.parse_csv(args.sections)
     acceptance = args.acceptance or []
     if not acceptance:
         sys.exit("최소 1개 이상의 --acceptance (완료 기준)를 지정하세요.")
 
-    task_id = next_id(data)
+    task_id = core.next_id(data)
     task = {
         "id": task_id,
         "phase": args.phase,
@@ -226,22 +107,23 @@ def cmd_add(args, data):
         "problem_md_sections": sections,
         "acceptance_criteria": acceptance,
         "notes": args.notes,
-        "created_at": today(),
-        "updated_at": today(),
+        "plain_explanation": None,
+        "related_files": [],
+        "feedback_log": [],
+        "created_at": core.today(),
+        "updated_at": core.today(),
     }
     data["tasks"].append(task)
-    data["updated_at"] = today()
-    write_doc(data, task)
-    save_backlog(data)
+    data["updated_at"] = core.today()
+    docs.write_doc(data, task)
+    core.save_backlog(data)
     print(f"추가됨: {task_id}  ({task['doc']})")
 
 
-def cmd_update(args, data):
-    t = find_task(data, args.id)
+def _update_simple_fields(t, args, data) -> bool:
     changed = False
-
     if args.status is not None:
-        require_status(data, args.status)
+        core.require_status(data, args.status)
         t["status"] = args.status
         changed = True
     if args.title is not None:
@@ -254,20 +136,24 @@ def cmd_update(args, data):
         t["estimated_minutes"] = args.minutes
         changed = True
     if args.phase is not None:
-        require_phase(data, args.phase, args.new_phase_title)
+        core.require_phase(data, args.phase, args.new_phase_title)
         t["phase"] = args.phase
         t["phase_title"] = data["phase_legend"][args.phase]
         changed = True
     if args.sections is not None:
-        t["problem_md_sections"] = parse_csv(args.sections)
+        t["problem_md_sections"] = core.parse_csv(args.sections)
         changed = True
     if args.notes is not None:
         t["notes"] = args.notes if args.notes != "" else None
         changed = True
+    return changed
 
+
+def _update_depends(t, args, data) -> bool:
+    changed = False
     if args.add_depends:
-        new_ids = parse_csv(args.add_depends)
-        require_depends_exist(data, new_ids)
+        new_ids = core.parse_csv(args.add_depends)
+        core.require_depends_exist(data, new_ids)
         for i in new_ids:
             if i == t["id"]:
                 sys.exit("작업은 자기 자신에 의존할 수 없습니다.")
@@ -275,11 +161,46 @@ def cmd_update(args, data):
                 t["depends_on"].append(i)
         changed = True
     if args.remove_depends:
-        for i in parse_csv(args.remove_depends):
+        for i in core.parse_csv(args.remove_depends):
             if i in t["depends_on"]:
                 t["depends_on"].remove(i)
         changed = True
+    return changed
 
+
+def _update_briefing_fields(t, args) -> bool:
+    changed = False
+    if args.explanation is not None:
+        t["plain_explanation"] = args.explanation
+        changed = True
+    if args.clear_related_files:
+        t["related_files"] = []
+        changed = True
+    if args.add_related_file:
+        t.setdefault("related_files", [])
+        for entry in args.add_related_file:
+            if "::" not in entry:
+                sys.exit(f"--add-related-file 형식 오류 (path::reason 필요): {entry}")
+            path, reason = entry.split("::", 1)
+            t["related_files"].append({"path": path.strip(), "reason": reason.strip()})
+        changed = True
+    return changed
+
+
+def _update_feedback(t, args) -> bool:
+    changed = False
+    if args.clear_feedback:
+        t["feedback_log"] = []
+        changed = True
+    if args.add_feedback:
+        t.setdefault("feedback_log", [])
+        t["feedback_log"].append({"date": core.today(), "text": args.add_feedback})
+        changed = True
+    return changed
+
+
+def _update_acceptance(t, args) -> bool:
+    changed = False
     if args.add_acceptance:
         t["acceptance_criteria"].append(args.add_acceptance)
         changed = True
@@ -290,29 +211,69 @@ def cmd_update(args, data):
             changed = True
         else:
             sys.exit(f"acceptance_criteria 인덱스 범위 초과: {idx}")
+    return changed
+
+
+def cmd_update(args, data):
+    t = core.find_task(data, args.id)
+    changed = _update_simple_fields(t, args, data)
+    changed = _update_depends(t, args, data) or changed
+    changed = _update_acceptance(t, args) or changed
+    changed = _update_briefing_fields(t, args) or changed
+    changed = _update_feedback(t, args) or changed
 
     if not changed:
         print("변경 사항 없음 (옵션을 지정하세요: --status, --title, --add-depends 등)")
         return
 
-    t["updated_at"] = today()
-    data["updated_at"] = today()
-    write_doc(data, t)
-    save_backlog(data)
+    t["updated_at"] = core.today()
+    data["updated_at"] = core.today()
+    docs.write_doc(data, t)
+    core.save_backlog(data)
     print(f"갱신됨: {t['id']}")
 
 
 def cmd_set_status(args, data):
-    t = find_task(data, args.id)
-    require_status(data, args.status)
+    t = core.find_task(data, args.id)
+    core.require_status(data, args.status)
     t["status"] = args.status
     if args.note:
         t["notes"] = (t["notes"] + "\n" + args.note) if t.get("notes") else args.note
-    t["updated_at"] = today()
-    data["updated_at"] = today()
-    write_doc(data, t)
-    save_backlog(data)
+    t["updated_at"] = core.today()
+    data["updated_at"] = core.today()
+    docs.write_doc(data, t)
+    core.save_backlog(data)
     print(f"{t['id']} 상태 변경 -> {args.status}")
+
+
+def cmd_start(args, data):
+    t = core.find_task(data, args.id)
+    if t["status"] != "in_progress":
+        t["status"] = "in_progress"
+        t["updated_at"] = core.today()
+        data["updated_at"] = core.today()
+        docs.write_doc(data, t)
+        core.save_backlog(data)
+    state.set_active(t["id"])
+    print(f"{t['id']} 활성 작업으로 설정, 상태 -> in_progress")
+
+
+def cmd_active(args, data):
+    active = state.get_active()
+    if not active:
+        print("활성 작업 없음")
+        return
+    t = core.find_task(data, active["id"])
+    print(f"{t['id']} ({t['status']}) - {t['title']}  [시작: {active.get('started_at', '?')}]")
+
+
+def cmd_clear_active(args, data):
+    active = state.get_active()
+    state.clear_active()
+    if active:
+        print(f"활성 작업 해제됨: {active['id']} (status는 변경하지 않음)")
+    else:
+        print("이미 활성 작업 없음")
 
 
 def cmd_validate(args, data):
@@ -335,7 +296,7 @@ def cmd_validate(args, data):
                 problems.append(f"{t['id']}: 존재하지 않는 depends_on '{dep}'")
             if dep == t["id"]:
                 problems.append(f"{t['id']}: 자기 자신에 의존함")
-        doc_path = ROOT / t["doc"]
+        doc_path = core.ROOT / t["doc"]
         if not doc_path.exists():
             problems.append(f"{t['id']}: 문서 파일 없음 ({t['doc']})")
 
@@ -350,7 +311,7 @@ def cmd_validate(args, data):
 
 def cmd_sync_docs(args, data):
     for t in data["tasks"]:
-        write_doc(data, t)
+        docs.write_doc(data, t)
     print(f"문서 재생성 완료: {len(data['tasks'])}건")
 
 
@@ -358,10 +319,7 @@ def cmd_sync_docs(args, data):
 # argparse 구성
 # ---------------------------------------------------------------------------
 
-def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Graphify backlog.json CLI")
-    sub = p.add_subparsers(dest="command", required=True)
-
+def _add_query_subparsers(sub) -> None:
     sp = sub.add_parser("list", help="작업 목록 조회")
     sp.add_argument("--status")
     sp.add_argument("--phase")
@@ -374,6 +332,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("id")
     sp.set_defaults(func=cmd_show)
 
+    sp = sub.add_parser("validate", help="backlog.json 무결성 검사")
+    sp.set_defaults(func=cmd_validate)
+
+    sp = sub.add_parser("sync-docs", help="모든 backlog/<id>.md를 backlog.json 기준으로 재생성")
+    sp.set_defaults(func=cmd_sync_docs)
+
+
+def _add_mutation_subparsers(sub) -> None:
     sp = sub.add_parser("add", help="새 작업 추가 (id는 자동 부여)")
     sp.add_argument("--phase", required=True)
     sp.add_argument("--new-phase-title", help="phase가 새 값이면 legend에 등록할 제목")
@@ -401,6 +367,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--remove-depends", help="쉼표로 구분된 제거할 선행 작업 id")
     sp.add_argument("--add-acceptance", help="완료 기준 1개 추가")
     sp.add_argument("--remove-acceptance-index", type=int, help="완료 기준 인덱스(0부터) 제거")
+    sp.add_argument("--explanation", help="'쉬운 설명' 섹션 텍스트 (전체 교체)")
+    sp.add_argument("--add-related-file", action="append", metavar="PATH::REASON",
+                     help="관련 파일 추가, 'path::reason' 형식 (여러 번 지정 가능)")
+    sp.add_argument("--clear-related-files", action="store_true", help="관련 파일 목록 비우기")
+    sp.add_argument("--add-feedback", help="피드백 로그에 항목 추가 (날짜 자동 기록)")
+    sp.add_argument("--clear-feedback", action="store_true", help="피드백 로그 비우기")
     sp.set_defaults(func=cmd_update)
 
     sp = sub.add_parser("set-status", help="상태만 빠르게 변경")
@@ -409,19 +381,32 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--note", help="notes에 추가할 한 줄 사유")
     sp.set_defaults(func=cmd_set_status)
 
-    sp = sub.add_parser("validate", help="backlog.json 무결성 검사")
-    sp.set_defaults(func=cmd_validate)
 
-    sp = sub.add_parser("sync-docs", help="모든 backlog/<id>.md를 backlog.json 기준으로 재생성")
-    sp.set_defaults(func=cmd_sync_docs)
+def _add_active_subparsers(sub) -> None:
+    sp = sub.add_parser("start", help="작업을 '활성 작업'으로 지정하고 상태를 in_progress로 변경")
+    sp.add_argument("id")
+    sp.set_defaults(func=cmd_start)
 
+    sp = sub.add_parser("active", help="현재 활성 작업 표시")
+    sp.set_defaults(func=cmd_active)
+
+    sp = sub.add_parser("clear-active", help="활성 작업 해제 (status는 그대로 둠)")
+    sp.set_defaults(func=cmd_clear_active)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="Graphify backlog.json CLI")
+    sub = p.add_subparsers(dest="command", required=True)
+    _add_query_subparsers(sub)
+    _add_mutation_subparsers(sub)
+    _add_active_subparsers(sub)
     return p
 
 
 def main():
     parser = build_parser()
     args = parser.parse_args()
-    data = load_backlog()
+    data = core.load_backlog()
     args.func(args, data)
 
 

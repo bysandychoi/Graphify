@@ -36,6 +36,36 @@ def load_json_str(text: str):
         return {"tasks": []}
 
 
+def _load_previous() -> dict:
+    prev_show = run(["git", "show", "HEAD:backlog.json"])
+    return load_json_str(prev_show.stdout) if prev_show.returncode == 0 else {"tasks": []}
+
+
+def _newly_done(current: dict, prev_status: dict) -> list:
+    return [
+        t for t in current.get("tasks", [])
+        if t.get("status") == "done" and prev_status.get(t["id"]) != "done"
+    ]
+
+
+def _build_message(current: dict, prev_status: dict, newly_done: list):
+    if newly_done:
+        bullet_lines = "\n".join(f"- {t['id']}: {t['title']}" for t in newly_done)
+        subject = f"Complete backlog task(s): {', '.join(t['id'] for t in newly_done)}"
+        message = f"{subject}\n\n{bullet_lines}\n\ndate: {date.today().isoformat()}"
+        return subject, message
+    changed_ids = sorted(
+        t["id"] for t in current.get("tasks", [])
+        if prev_status.get(t["id"]) != t.get("status")
+    )
+    subject = f"Update backlog.json ({', '.join(changed_ids)})" if changed_ids else "Update backlog.json"
+    return subject, subject
+
+
+def _report(message: str) -> None:
+    print(json.dumps({"systemMessage": message}, ensure_ascii=False))
+
+
 def main():
     try:
         json.load(sys.stdin)
@@ -50,57 +80,27 @@ def main():
     if not cur_path.exists():
         return
     current = load_json_str(cur_path.read_text(encoding="utf-8"))
-
-    prev_show = run(["git", "show", "HEAD:backlog.json"])
-    previous = load_json_str(prev_show.stdout) if prev_show.returncode == 0 else {"tasks": []}
+    previous = _load_previous()
     prev_status = {t["id"]: t["status"] for t in previous.get("tasks", [])}
-
-    newly_done = [
-        t for t in current.get("tasks", [])
-        if t.get("status") == "done" and prev_status.get(t["id"]) != "done"
-    ]
+    newly_done = _newly_done(current, prev_status)
 
     add = run(["git", "add", "--"] + TRACKED_PATHS)
     if add.returncode != 0:
-        print(json.dumps({
-            "systemMessage": f"backlog 변경 stage 실패: {add.stderr.strip()}"
-        }, ensure_ascii=False))
+        _report(f"backlog 변경 stage 실패: {add.stderr.strip()}")
         return
 
-    if newly_done:
-        bullet_lines = "\n".join(f"- {t['id']}: {t['title']}" for t in newly_done)
-        subject = (
-            f"Complete backlog task(s): {', '.join(t['id'] for t in newly_done)}"
-        )
-        message = f"{subject}\n\n{bullet_lines}\n\ndate: {date.today().isoformat()}"
-    else:
-        changed_ids = sorted(
-            t["id"] for t in current.get("tasks", [])
-            if prev_status.get(t["id"]) != t.get("status")
-        )
-        if changed_ids:
-            subject = f"Update backlog.json ({', '.join(changed_ids)})"
-        else:
-            subject = "Update backlog.json"
-        message = subject
-
+    subject, message = _build_message(current, prev_status, newly_done)
     commit = run(["git", "commit", "-m", message])
     if commit.returncode != 0:
-        print(json.dumps({
-            "systemMessage": f"backlog 자동 커밋 실패: {commit.stderr.strip()}"
-        }, ensure_ascii=False))
+        _report(f"backlog 자동 커밋 실패: {commit.stderr.strip()}")
         return
 
     result_msg = f"backlog.json 변경사항 자동 커밋됨: {subject}"
-
     if newly_done:
         push = run(["git", "push"])
-        if push.returncode == 0:
-            result_msg += " (push 완료)"
-        else:
-            result_msg += f" (push 실패: {push.stderr.strip()})"
+        result_msg += " (push 완료)" if push.returncode == 0 else f" (push 실패: {push.stderr.strip()})"
 
-    print(json.dumps({"systemMessage": result_msg}, ensure_ascii=False))
+    _report(result_msg)
 
 
 if __name__ == "__main__":
