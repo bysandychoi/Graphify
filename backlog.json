@@ -546,7 +546,7 @@
       "phase_title": "가상 데이터 생성기",
       "title": "생성기 config 설계",
       "description": "lot 10,000 / 설비 80 / resource 24를 기본값으로 하되 소규모 테스트용 배율도 지정 가능한 config 구조를 설계한다.",
-      "status": "in_progress",
+      "status": "done",
       "doc": "backlog/T011.md",
       "estimated_minutes": 30,
       "depends_on": [
