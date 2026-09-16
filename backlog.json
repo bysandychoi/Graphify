@@ -218,6 +218,10 @@
         {
           "path": "CLAUDE.md",
           "reason": "프로젝트 지시사항"
+        },
+        {
+          "path": "docs/virtual_schema/lot_data.md",
+          "reason": "가상 lot_data 스키마 정의 산출물(이 문서)"
         }
       ]
     },
