@@ -26,16 +26,18 @@ Code는 세션 시작 시 `CLAUDE.md`를 프로젝트 지침으로 자동 로드
 | 순서 | 문서 | 역할 | 구성 요소 |
 | --- | --- | --- | --- |
 | 1 | `problem.md` | 문제 정의/업무 결정 (harness 문서 아님, 가장 먼저 읽는다) | 1.해결하려는 문제 · 2.사용자와 업무 상황 · 3.인터뷰에서 확인한 데이터의 의미 · 4.목표와 1차 범위 · 5.사용자가 확정한 축소 원칙 · 6.사용자가 판단하는 흐름 · 7.오류·불일치 처리 정책 · 8.가상 데이터 검증 계획 · 9.개발·실행 환경과 일정 · 10.미결 질문과 구현 전 확인 사항 |
-| 2 | `README.md` | 프로젝트 개요, 저장소 진입점 (미작성 — 현재는 내용 없는 26바이트 placeholder 파일만 tracked돼 있음) | 프로젝트 목적 · 1차 범위/제외 범위 · 실행 방법 개요(정해지지 않았다면 '미정'이라고 명시) · 문서 구조 안내(이 절 링크, 표 복제 금지) |
+| 2 | `README.md` | 프로젝트 개요, 저장소 진입점 (T002 작성 완료) | 프로젝트 목적 · 1차 범위/제외 범위 · 실행 방법 개요(정해지지 않았다면 '미정'이라고 명시) · 문서 구조 안내(이 절 링크, 표 복제 금지) |
 | 3 | `AGENTS.md` | 공통 작업 규칙의 단일 출처 | 문서 구조 · 핵심 원칙 · backlog.json은 CLI로만 다룬다 · 작업 흐름: task-briefer → 구현 → adversarial-reviewer → 완료 · in_progress 훅 (`guard_task_in_progress.py`) · 코드 작성 규칙 · 세션 시작 시 · 응답 종료 알림 (`notify_stop_popup.py`) · 가상 데이터 원칙 (problem.md 8절) |
 | 4 | `CLAUDE.md` | Claude 전용 최소 안내 (사람은 건너뛰어도 됨. 규칙 전문 없음, 링크만) | AGENTS.md 링크 안내 · problem.md/backlog.json 위치 안내 |
-| 5 | `HANDOFF.md` | 현재 상태 스냅샷 (미작성). 한 phase가 전부 done되면, 그 작업이 아직 in_progress인 동안 갱신하고 같이 커밋한다(아래 "작업 흐름" 참고 — `guard_task_in_progress.py`의 예외 대상이 아니다) | 현재 상태 · 검증 결과 · 가정 · 다음 작업 · 미결 사항(problem.md 10.미결 질문과 구현 전 확인 사항 반영) |
+| 5 | `HANDOFF.md` | 현재 상태 스냅샷 (T005 초안 작성 완료). 한 phase가 전부 done되면, 그 작업이 아직 in_progress인 동안 갱신하고 같이 커밋한다(아래 "작업 흐름" 참고 — `guard_task_in_progress.py`의 예외 대상이 아니다) | 현재 상태 · 검증 결과 · 가정 · 다음 작업 · 미결 사항(problem.md 10.미결 질문과 구현 전 확인 사항 반영) |
 | - | `backlog.json` / `backlog/*.md` | 작업 목록 (CLI 전용 접근) | `tools/backlog_cli.py`로만 조회 (직접 열지 않음) |
 | - | `docs/virtual_schema/*.md` | 가상(개발용) 데이터 스키마 정의 — 회사 실제 스키마 아님 | `README.md`(개요·구분 문구, T010) · `lot_data.md`(T006) · `eqp_step_run_spec.md`(T007) · `resource_data.md`(T008) · `location_floor.md`(T009) |
+| - | `docs/generator/*.md` | 가상 데이터 생성기 설계 문서 (표본 선택 config와는 별개) | `config.md`(생성기 config 구조, T011) |
 
-AGENTS.md/problem.md 행의 구성 요소는 실제 `##` 절 제목을 그대로 나열한
-것이다. README/CLAUDE/HANDOFF 행은 아직 절이 없거나(README, HANDOFF) 절
-형식이 아니므로(CLAUDE, 안내문 2문단) 지금 확정한 구성 요소를 나열했다.
+AGENTS.md/problem.md/README/HANDOFF 행의 구성 요소는 실제 `##` 절 제목을
+그대로 나열한 것이다(README의 "프로젝트 목적"만 예외 — 이 절은 제목 없는
+도입 문단으로 표현했다). CLAUDE 행은 절 형식이 아니므로(안내문 2문단)
+지금 확정한 구성 요소를 나열했다.
 
 ## 핵심 원칙
 
