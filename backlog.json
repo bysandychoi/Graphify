@@ -421,7 +421,7 @@
       "phase_title": "가상 스키마 정의 (회사 스키마와 구분)",
       "title": "가상 스키마 vs 회사 스키마 구분 문서화",
       "description": "가상 스키마가 개발/검증용이며 회사 데이터 구조와 무관함을 문서에 명시한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T010.md",
       "estimated_minutes": 15,
       "depends_on": [
