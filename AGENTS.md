@@ -31,6 +31,7 @@ Code는 세션 시작 시 `CLAUDE.md`를 프로젝트 지침으로 자동 로드
 | 4 | `CLAUDE.md` | Claude 전용 최소 안내 (사람은 건너뛰어도 됨. 규칙 전문 없음, 링크만) | AGENTS.md 링크 안내 · problem.md/backlog.json 위치 안내 |
 | 5 | `HANDOFF.md` | 현재 상태 스냅샷 (미작성). 한 phase가 전부 done되면, 그 작업이 아직 in_progress인 동안 갱신하고 같이 커밋한다(아래 "작업 흐름" 참고 — `guard_task_in_progress.py`의 예외 대상이 아니다) | 현재 상태 · 검증 결과 · 가정 · 다음 작업 · 미결 사항(problem.md 10.미결 질문과 구현 전 확인 사항 반영) |
 | - | `backlog.json` / `backlog/*.md` | 작업 목록 (CLI 전용 접근) | `tools/backlog_cli.py`로만 조회 (직접 열지 않음) |
+| - | `docs/virtual_schema/*.md` | 가상(개발용) 데이터 스키마 정의 — 회사 실제 스키마 아님 | `README.md`(개요·구분 문구, T010) · `lot_data.md`(T006) · `eqp_step_run_spec.md`(T007) · `resource_data.md`(T008) · `location_floor.md`(T009) |
 
 AGENTS.md/problem.md 행의 구성 요소는 실제 `##` 절 제목을 그대로 나열한
 것이다. README/CLAUDE/HANDOFF 행은 아직 절이 없거나(README, HANDOFF) 절
