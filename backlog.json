@@ -95,7 +95,7 @@
       "phase_title": "저장소 최소 하네스",
       "title": "README.md 작성",
       "description": "프로젝트 목적(축소 도구), 1차 범위, 제외 범위, 실행 개요를 정리한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T002.md",
       "estimated_minutes": 30,
       "depends_on": [
