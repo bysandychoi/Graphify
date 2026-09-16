@@ -1,0 +1,61 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/hooks/session_start_branch_check.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/hooks/guard_backlog_direct_access.py 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/hooks/guard_backlog_bash.py 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/hooks/backlog_auto_commit.py 2>/dev/null || true",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/hooks/check_line_limits.py 2>/dev/null || true",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python tools/hooks/run_pylint.py 2>/dev/null || true",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
