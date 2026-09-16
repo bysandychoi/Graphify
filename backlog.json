@@ -477,6 +477,10 @@
         {
           "path": "docs/virtual_schema/location_floor.md",
           "reason": "T009 산출물, 상단에 가상 스키마 구분 문구 포함"
+        },
+        {
+          "path": "docs/virtual_schema/README.md",
+          "reason": "가상 스키마 인덱스/구분 원칙 확인 산출물(이 문서)"
         }
       ]
     },
