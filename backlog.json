@@ -828,7 +828,7 @@
       "phase_title": "가상 데이터 생성기",
       "title": "동일 설비·여러 resource 쌍 케이스 주입",
       "description": "같은 eqp가 서로 다른 resource와 각각 쌍을 이루는 lot을 의도적으로 포함한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T016.md",
       "estimated_minutes": 20,
       "depends_on": [
