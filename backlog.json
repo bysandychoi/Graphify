@@ -149,7 +149,7 @@
       "phase_title": "가상 스키마 정의 (회사 스키마와 구분)",
       "title": "가상 lot_data 스키마 정의",
       "description": "lot id, 현재 step, 가능 (eqp, resource) 쌍 목록, 선택 속성(설비 수 계산용 포함) 필드를 가상 스키마로 정의한다. 회사 실제 필드가 아님을 명시한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T006.md",
       "estimated_minutes": 30,
       "depends_on": [],
