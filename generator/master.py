@@ -18,19 +18,15 @@ seed 소비 방식(config.md "seed" 절이 T012 구현에 위임한 결정): 생
 """
 import random
 
+from generator._util import positive_int
+
 _EQP_ID_WIDTH = 4
 _RESOURCE_ID_WIDTH = 4
 
 
-def _positive_int(value, name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise ValueError(f"{name} must be a positive int, got {value!r}")
-    return value
-
-
 def generate_equipment_floors(eqp_count: int, floor_count: int, rng: random.Random) -> list:
-    eqp_count = _positive_int(eqp_count, "eqp_count")
-    floor_count = _positive_int(floor_count, "floor_count")
+    eqp_count = positive_int(eqp_count, "eqp_count")
+    floor_count = positive_int(floor_count, "floor_count")
     if floor_count > eqp_count:
         raise ValueError(
             f"floor_count ({floor_count}) must not exceed eqp_count ({eqp_count}): "
@@ -49,7 +45,7 @@ def generate_equipment_floors(eqp_count: int, floor_count: int, rng: random.Rand
 
 
 def generate_resources(resource_count: int) -> list:
-    resource_count = _positive_int(resource_count, "resource_count")
+    resource_count = positive_int(resource_count, "resource_count")
     return [
         {"resource_id": f"R{i:0{_RESOURCE_ID_WIDTH}d}"}
         for i in range(1, resource_count + 1)
