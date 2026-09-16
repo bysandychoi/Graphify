@@ -701,6 +701,12 @@
           "path": "docs/virtual_schema/lot_data.md",
           "reason": "candidate_pairs 스키마로 생성 데이터의 검증 기준"
         }
+      ],
+      "feedback_log": [
+        {
+          "date": "2026-09-17",
+          "text": "테스트 0건: 유일한 완료 기준(같은 step 내 resource별 설비 집합 상이)을 검증하는 코드가 없고, resource_count/eqp_count가 1이면 기준이 조용히 불성립. / generate_eqp_step(...,resource_ids,eqp_ids,...)과 generate_eqp_step_data(config,eqp_ids,resource_ids)의 인자 순서가 서로 뒤바뀜 - 둘 다 list[str]이라 뒤섞어 넘겨도 검증 없이 통과. 마스터 출력을 넘겨주는 배선/호출자가 없어 참조 무결성은 전적으로 호출자 책임. / eqp_step.py:47-54 범위 무음 보정: resources_per_step=(5,2)면 에러 없이 randint(2,2), lo=0이면 행 자체가 사라지거나 eligible_eqp_ids=[] 생성 - 후자는 eqp_step_run_spec.md가 '미결'로 못박은 '빈 배열 vs 행 부재' 상태를 코드가 만들어냄(검증으로 확인). / docstring:8-10의 유일성 보장 주장은 과장 - process_ids에 중복이 있으면 중복 키 생성됨(재현 확인). / resources_per_step/eqp_per_resource=(1,3)은 config.md에 없는 미문서화 매직값이고 config 경로로 조절 불가. 기본 config에서 (process,step) 120개 중 14개는 설비 1대만 제공, 48개만 eligible_eqp_count>=5 지원 - T015/T017/T018 실현 가능성을 말없이 깎음. / rng=None 기본 경로가 Random(config['seed'])를 다시 만들어 master.py가 문서화한 '단일 인스턴스 공유' 계약 위반(난수열 재사용). / P/S id 폭 2 vs master의 4, WHY 주석 없음, 100 넘으면 사전식 정렬 깨짐."
+        }
       ]
     },
     {
