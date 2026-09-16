@@ -294,7 +294,7 @@
       "phase_title": "가상 스키마 정의 (회사 스키마와 구분)",
       "title": "가상 resource_data 스키마 정의",
       "description": "resource id와 최소 속성을 가상으로 정의한다. 실제 연결 키는 미확인이므로 가상 스키마 내에서만 유효함을 명시한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T008.md",
       "estimated_minutes": 20,
       "depends_on": [],
