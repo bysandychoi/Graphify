@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graphify Backlog Dashboard</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --border: #dcdde1;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --danger: #b42318;
+    --danger-bg: #fef3f2;
+    --warn: #9a6700;
+    --warn-bg: #fffaeb;
+    --ok-bg: #eef7ee;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+  }
+  h1 { font-size: 17px; margin: 0 0 8px; }
+  .file-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+  }
+  .file-row .info { color: var(--muted); }
+  button {
+    font: inherit;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover { background: #f0f0f2; }
+  input[type="text"], select {
+    font: inherit;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  main {
+    max-width: 1100px;
+    margin: 16px auto;
+    padding: 0 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  section.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  section.panel h2 {
+    font-size: 14px;
+    margin: 0 0 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .banner {
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    white-space: pre-wrap;
+  }
+  .banner.error { background: var(--danger-bg); color: var(--danger); border: 1px solid #f3c6c1; }
+  .banner.warn { background: var(--warn-bg); color: var(--warn); border: 1px solid #f5dfa3; }
+  .banner.info { background: var(--ok-bg); color: #2f5e33; border: 1px solid #cfe8cf; }
+  .stat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .stat-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    min-width: 110px;
+  }
+  .stat-card .n { font-size: 20px; font-weight: 600; }
+  .stat-card .l { color: var(--muted); font-size: 12px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: #f3f6ff; }
+  tbody tr.selected { background: #e6edff; }
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: #eef2ff;
+    color: #3730a3;
+  }
+  .badge.unknown { background: var(--warn-bg); color: var(--warn); }
+  .muted { color: var(--muted); }
+  .field {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 6px 12px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .field .k { color: var(--muted); }
+  .field .k small { display: block; color: #9aa1ab; }
+  .field .v ul { margin: 0; padding-left: 18px; }
+  .field .v pre {
+    white-space: pre-wrap;
+    background: #f5f5f7;
+    padding: 8px;
+    border-radius: 6px;
+    margin: 0;
+    font-family: inherit;
+  }
+  .err-ref { color: var(--danger); font-weight: 600; }
+  .extra-fields summary { cursor: pointer; color: var(--muted); margin-top: 8px; }
+  .doc-view {
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+  .doc-view pre {
+    white-space: pre-wrap;
+    background: #f5f5f7;
+    padding: 10px;
+    border-radius: 6px;
+    max-height: 400px;
+    overflow: auto;
+  }
+  #detail-panel { display: none; }
+  footer {
+    max-width: 1100px;
+    margin: 0 auto 40px;
+    padding: 0 16px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Graphify Backlog Dashboard <span class="muted" style="font-weight:normal;">(읽기 전용 · 로컬 파일 선택)</span></h1>
+  <div class="file-row">
+    <button id="pick-btn">JSON 파일 선택…</button>
+    <button id="reselect-btn" disabled>다시 선택 / 새로 읽기</button>
+    <button id="pick-docs-btn">문서(.md) 파일 연결…</button>
+    <input id="main-file-input" type="file" accept=".json,application/json" hidden>
+    <input id="docs-file-input" type="file" accept=".md" multiple hidden>
+    <span id="file-info" class="info">불러온 파일이 없습니다.</span>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel" id="status-messages"></section>
+
+  <section class="panel" id="stats-panel" style="display:none;">
+    <h2>요약</h2>
+    <div class="stat-grid" id="stat-grid"></div>
+  </section>
+
+  <section class="panel" id="validation-panel" style="display:none;">
+    <h2>무결성 점검</h2>
+    <div id="validation-body"></div>
+  </section>
+
+  <section class="panel" id="list-panel" style="display:none;">
+    <h2>작업 목록</h2>
+    <div class="filters">
+      <label>상태:
+        <select id="status-filter"><option value="">전체</option></select>
+      </label>
+      <label>검색:
+        <input id="search-box" type="text" placeholder="id · 제목 · 설명">
+      </label>
+      <span id="filter-count" class="muted"></span>
+    </div>
+    <div style="overflow-x:auto; margin-top:10px;">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>제목</th><th>상태</th><th>단계</th><th>예상 소요</th><th>문서</th></tr>
+        </thead>
+        <tbody id="task-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" id="detail-panel">
+    <h2>작업 상세</h2>
+    <div id="detail-body"></div>
+  </section>
+
+</main>
+
+<footer>
+  이 화면은 선택한 JSON 파일을 브라우저 메모리에서만 읽습니다. 파일을 수정하거나
+  외부로 전송하지 않으며, gate 등 명령처럼 보이는 값도 화면에 텍스트로만 표시할 뿐
+  실행하지 않습니다. 최신 내용을 보려면 "다시 선택 / 새로 읽기"로 같은 파일을
+  다시 선택하세요.
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var state = {
+    fileName: null,
+    fileSize: null,
+    fileLastModified: null,
+    loadedAt: null,
+    data: null,
+    parseError: null,
+    docsFiles: new Map(),
+    filterStatus: '',
+    filterQuery: '',
+    selectedId: null,
+    docViewText: null,
+    docViewLabel: null,
+    docViewMissing: null
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function isNullish(v) { return v === null || v === undefined; }
+
+  function fmtDateTime(d) {
+    if (!d) return '';
+    try { return new Date(d).toLocaleString('ko-KR'); } catch (e) { return String(d); }
+  }
+
+  function humanSize(bytes) {
+    if (typeof bytes !== 'number') return '?';
+    if (bytes < 1024) return bytes + ' B';
+    var units = ['KB', 'MB', 'GB'];
+    var v = bytes / 1024, i = 0;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return v.toFixed(1) + ' ' + units[i];
+  }
+
+  function clearChildren(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  function textEl(tag, text, cls) {
+    var e = document.createElement(tag);
+    if (text !== undefined && text !== null) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  // ---------------------------------------------------------------------
+  // 파일 로딩
+  // ---------------------------------------------------------------------
+
+  $('pick-btn').addEventListener('click', function () { $('main-file-input').click(); });
+  $('reselect-btn').addEventListener('click', function () { $('main-file-input').click(); });
+  $('pick-docs-btn').addEventListener('click', function () { $('docs-file-input').click(); });
+  $('main-file-input').addEventListener('change', onMainFileChange);
+  $('docs-file-input').addEventListener('change', onDocsFileChange);
+  $('status-filter').addEventListener('change', function (e) {
+    state.filterStatus = e.target.value;
+    render();
+  });
+  var searchTimer = null;
+  $('search-box').addEventListener('input', function (e) {
+    var val = e.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+      state.filterQuery = val;
+      render();
+    }, 120);
+  });
+
+  function onMainFileChange(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    state.fileName = file.name;
+    state.fileSize = file.size;
+    state.fileLastModified = file.lastModified;
+    var reader = new FileReader();
+    reader.onload = function () {
+      state.loadedAt = new Date();
+      parseAndSet(String(reader.result));
+      state.selectedId = null;
+      state.docViewText = null;
+      state.docViewLabel = null;
+      state.docViewMissing = null;
+      $('reselect-btn').disabled = false;
+      render();
+    };
+    reader.onerror = function () {
+      state.parseError = '파일을 읽는 중 오류가 발생했습니다: ' + (reader.error ? reader.error.message : '알 수 없는 오류');
+      state.data = null;
+      render();
+    };
+    reader.readAsText(file, 'utf-8');
+    // 같은 파일을 다시 선택해도 change 이벤트가 발생하도록 값 초기화
+    e.target.value = '';
+  }
+
+  function parseAndSet(text) {
+    try {
+      state.data = JSON.parse(text);
+      state.parseError = null;
+    } catch (err) {
+      state.data = null;
+      state.parseError = err.message;
+    }
+  }
+
+  function onDocsFileChange(e) {
+    var files = Array.prototype.slice.call(e.target.files || []);
+    state.docsFiles = new Map();
+    files.forEach(function (f) {
+      var rel = f.webkitRelativePath || f.name;
+      state.docsFiles.set(rel, f);
+      state.docsFiles.set(f.name, f);
+    });
+    e.target.value = '';
+    render();
+  }
+
+  // ---------------------------------------------------------------------
+  // 파생 데이터
+  // ---------------------------------------------------------------------
+
+  function getTasksRaw() {
+    if (!state.data || typeof state.data !== 'object') return null;
+    if (!Array.isArray(state.data.tasks)) return null;
+    return state.data.tasks;
+  }
+
+  function idOf(t) { return (t && !isNullish(t.id)) ? t.id : undefined; }
+
+  function computeValidation(tasks) {
+    var problems = [];
+    var idSeen = new Set();
+    var idSet = new Set();
+    tasks.forEach(function (t) { var id = idOf(t); if (id !== undefined) idSet.add(id); });
+
+    tasks.forEach(function (t, idx) {
+      if (!t || typeof t !== 'object') { problems.push('작업 목록의 ' + idx + '번째 항목이 객체가 아닙니다.'); return; }
+      var id = idOf(t);
+      if (id === undefined) { problems.push('id가 없는 작업이 있습니다 (인덱스 ' + idx + ').'); return; }
+      if (idSeen.has(id)) problems.push('중복 id: ' + id);
+      idSeen.add(id);
+    });
+
+    var statusLegend = (state.data.status_legend && typeof state.data.status_legend === 'object')
+      ? state.data.status_legend : null;
+    var unknownStatuses = new Set();
+
+    tasks.forEach(function (t) {
+      if (!t) return;
+      var id = idOf(t) !== undefined ? idOf(t) : '(id 없음)';
+      if (statusLegend && !isNullish(t.status) && !(t.status in statusLegend)) {
+        unknownStatuses.add(t.status);
+      }
+      var deps = Array.isArray(t.deps) ? t.deps : (Array.isArray(t.depends_on) ? t.depends_on : []);
+      deps.forEach(function (d) {
+        if (!idSet.has(d)) problems.push(id + ': 존재하지 않는 deps 참조 \'' + d + '\'');
+      });
+      if (!isNullish(t.parent) && !idSet.has(t.parent)) {
+        problems.push(id + ': 존재하지 않는 parent 참조 \'' + t.parent + '\'');
+      }
+    });
+
+    return { problems: problems, unknownStatuses: Array.from(unknownStatuses), statusLegend: statusLegend };
+  }
+
+  function computeStats(tasks) {
+    var byStatus = {};
+    tasks.forEach(function (t) {
+      var s = (t && !isNullish(t.status) && t.status !== '') ? String(t.status) : '(상태 없음)';
+      byStatus[s] = (byStatus[s] || 0) + 1;
+    });
+    var parentIds = new Set();
+    tasks.forEach(function (t) { if (t && !isNullish(t.parent)) parentIds.add(t.parent); });
+    var groupCount = 0;
+    tasks.forEach(function (t) { if (t && parentIds.has(idOf(t))) groupCount++; });
+    var leafCount = tasks.length - groupCount;
+    return { total: tasks.length, byStatus: byStatus, groupCount: groupCount, leafCount: leafCount };
+  }
+
+  function matchesQuery(t, q) {
+    if (!q) return true;
+    var needle = q.toLowerCase();
+    var id = idOf(t);
+    var title = t.title;
+    var summary = (!isNullish(t.summary)) ? t.summary : t.description;
+    return [id, title, summary].some(function (v) {
+      return typeof v === 'string' && v.toLowerCase().indexOf(needle) !== -1;
+    });
+  }
+
+  function getFilteredTasks() {
+    var tasks = getTasksRaw() || [];
+    return tasks.filter(function (t) {
+      if (!t) return false;
+      if (state.filterStatus && t.status !== state.filterStatus) return false;
+      return matchesQuery(t, state.filterQuery);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // 렌더링
+  // ---------------------------------------------------------------------
+
+  function render() {
+    renderFileInfo();
+    renderMessages();
+
+    var tasks = getTasksRaw();
+    var hasUsableData = !state.parseError && tasks !== null;
+
+    $('stats-panel').style.display = hasUsableData ? '' : 'none';
+    $('validation-panel').style.display = hasUsableData ? '' : 'none';
+    $('list-panel').style.display = hasUsableData ? '' : 'none';
+
+    if (!hasUsableData) {
+      $('detail-panel').style.display = 'none';
+      return;
+    }
+
+    renderStats(tasks);
+    renderValidation(tasks);
+    renderStatusOptions(tasks);
+    renderTaskTable();
+    renderDetail();
+  }
+
+  function renderFileInfo() {
+    var info = $('file-info');
+    if (!state.fileName) {
+      info.textContent = '불러온 파일이 없습니다.';
+      return;
+    }
+    var parts = [
+      '파일: ' + state.fileName,
+      '크기: ' + humanSize(state.fileSize),
+      '파일 수정 시각: ' + fmtDateTime(state.fileLastModified),
+      '불러온 시각: ' + fmtDateTime(state.loadedAt)
+    ];
+    if (state.docsFiles.size > 0) {
+      parts.push('연결된 문서: ' + Math.floor(state.docsFiles.size / 2) + '개');
+    } else {
+      parts.push('연결된 문서 없음');
+    }
+    info.textContent = parts.join(' · ');
+  }
+
+  function renderMessages() {
+    var box = $('status-messages');
+    clearChildren(box);
+    var any = false;
+
+    if (state.parseError) {
+      box.appendChild(textEl('div', 'JSON 파싱 오류: ' + state.parseError, 'banner error'));
+      any = true;
+    } else if (state.fileName && state.data === null) {
+      box.appendChild(textEl('div', '파일을 아직 읽지 못했습니다.', 'banner warn'));
+      any = true;
+    } else if (state.fileName && getTasksRaw() === null) {
+      box.appendChild(textEl('div',
+        '이 JSON에서 tasks 배열을 찾을 수 없습니다. { "tasks": [...] } 형태의 백로그 파일인지 확인하세요.',
+        'banner error'));
+      any = true;
+    } else if (state.fileName) {
+      var tasks = getTasksRaw();
+      if (tasks.length === 0) {
+        box.appendChild(textEl('div', 'tasks 배열이 비어 있습니다 (작업 없음).', 'banner warn'));
+        any = true;
+      }
+    }
+
+    if (!state.fileName) {
+      box.appendChild(textEl('div',
+        '상단의 "JSON 파일 선택…" 버튼으로 프로젝트의 backlog.json을 선택하세요. ' +
+        '이 화면은 선택한 파일만 읽으며 어떤 파일도 자동으로 열지 않습니다.',
+        'banner info'));
+      any = true;
+    }
+
+    box.style.display = any ? '' : 'none';
+  }
+
+  function renderStats(tasks) {
+    var stats = computeStats(tasks);
+    var grid = $('stat-grid');
+    clearChildren(grid);
+
+    function card(n, label) {
+      var c = textEl('div', null, 'stat-card');
+      c.appendChild(textEl('div', String(n), 'n'));
+      c.appendChild(textEl('div', label, 'l'));
+      grid.appendChild(c);
+    }
+
+    card(stats.total, '전체 항목 수 (parent 포함)');
+    card(stats.leafCount, '실제 세부 실행 작업 수');
+    if (stats.groupCount === 0) {
+      grid.appendChild(textEl('div',
+        '이 데이터에는 parent로 참조된 항목이 없어 전체 항목 수와 실행 작업 수가 같습니다.',
+        'muted'));
+    }
+    Object.keys(stats.byStatus).sort().forEach(function (s) {
+      card(stats.byStatus[s], '상태: ' + s);
+    });
+  }
+
+  function renderValidation(tasks) {
+    var v = computeValidation(tasks);
+    var body = $('validation-body');
+    clearChildren(body);
+
+    if (!v.statusLegend) {
+      body.appendChild(textEl('div',
+        'status_legend가 없어 상태값이 정의된 값인지 비교할 수 없습니다 (참고용으로만 표시).',
+        'banner warn'));
+    } else if (v.unknownStatuses.length > 0) {
+      body.appendChild(textEl('div',
+        'status_legend에 없는 상태값: ' + v.unknownStatuses.join(', '),
+        'banner warn'));
+    }
+
+    if (v.problems.length > 0) {
+      var err = textEl('div', null, 'banner error');
+      err.appendChild(textEl('div', '오류 ' + v.problems.length + '건 발견:'));
+      var ul = document.createElement('ul');
+      ul.style.margin = '6px 0 0';
+      v.problems.forEach(function (p) { ul.appendChild(textEl('li', p)); });
+      err.appendChild(ul);
+      body.appendChild(err);
+    } else {
+      body.appendChild(textEl('div', 'id 중복, deps/parent 참조, 상태값 오류가 발견되지 않았습니다.', 'banner info'));
+    }
+  }
+
+  function renderStatusOptions(tasks) {
+    var sel = $('status-filter');
+    var current = state.filterStatus;
+    clearChildren(sel);
+    sel.appendChild(textEl('option', '전체', null));
+    sel.firstChild.value = '';
+    var statuses = new Set();
+    tasks.forEach(function (t) { if (t && !isNullish(t.status)) statuses.add(t.status); });
+    Array.from(statuses).sort().forEach(function (s) {
+      var opt = textEl('option', s);
+      opt.value = s;
+      sel.appendChild(opt);
+    });
+    sel.value = current;
+    if (sel.value !== current) { state.filterStatus = ''; sel.value = ''; }
+  }
+
+  function renderTaskTable() {
+    var tbody = $('task-tbody');
+    clearChildren(tbody);
+    var filtered = getFilteredTasks();
+    var total = (getTasksRaw() || []).length;
+    $('filter-count').textContent = filtered.length + ' / ' + total + '건 표시';
+
+    if (filtered.length === 0) {
+      var tr = document.createElement('tr');
+      var td = textEl('td', '조건에 맞는 작업이 없습니다.', 'muted');
+      td.colSpan = 6;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    filtered.forEach(function (t) {
+      var tr = document.createElement('tr');
+      var id = idOf(t);
+      if (id === state.selectedId) tr.className = 'selected';
+      tr.appendChild(textEl('td', id !== undefined ? String(id) : '(id 없음)'));
+      tr.appendChild(textEl('td', t.title || '정보 없음'));
+      tr.appendChild(textEl('td', t.status || '정보 없음'));
+      tr.appendChild(textEl('td', t.phase || '미지정'));
+      var est = pickField(t, ['est_min', 'estimated_minutes']);
+      tr.appendChild(textEl('td', est ? (est.value + '분') : '미지정'));
+      tr.appendChild(textEl('td', t.doc || '미지정'));
+      tr.addEventListener('click', function () {
+        state.selectedId = id;
+        state.docViewText = null;
+        state.docViewLabel = null;
+        state.docViewMissing = null;
+        render();
+        $('detail-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // 상세 화면
+  // ---------------------------------------------------------------------
+
+  function pickField(t, keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      if (t && Object.prototype.hasOwnProperty.call(t, k) && !isNullish(t[k]) && t[k] !== '') {
+        return { key: k, value: t[k] };
+      }
+    }
+    return null;
+  }
+
+  var CANONICAL_KEYS = [
+    'id', 'title', 'status', 'phase', 'phase_title',
+    'summary', 'description',
+    'done_when', 'acceptance_criteria',
+    'deps', 'depends_on',
+    'parent',
+    'doc',
+    'where', 'related_files',
+    'est_min', 'estimated_minutes',
+    'gate', 'owner', 'claimed_at', 'updated_at', 'created_at',
+    'log', 'feedback_log',
+    'done_at', 'evidence'
+  ];
+
+  function fieldRow(label, keyNote, valueNode) {
+    var row = textEl('div', null, 'field');
+    var k = textEl('div', label, 'k');
+    if (keyNote) k.appendChild(textEl('small', '실제 필드: ' + keyNote));
+    row.appendChild(k);
+    var v = textEl('div', null, 'v');
+    v.appendChild(valueNode);
+    row.appendChild(v);
+    return row;
+  }
+
+  function simpleValueNode(text) { return textEl('span', text); }
+
+  function listValueNode(items, renderItem) {
+    if (!items || items.length === 0) return textEl('span', '없음', 'muted');
+    var ul = document.createElement('ul');
+    items.forEach(function (item) { ul.appendChild(renderItem(item)); });
+    return ul;
+  }
+
+  function depRefNode(depId, idMap) {
+    var li = document.createElement('li');
+    var task = idMap.get(depId);
+    if (task) {
+      li.textContent = depId + (task.title ? (' — ' + task.title) : '');
+    } else {
+      var span = textEl('span', depId + ' — 존재하지 않는 참조', 'err-ref');
+      li.appendChild(span);
+    }
+    return li;
+  }
+
+  function renderDetail() {
+    var panel = $('detail-panel');
+    var body = $('detail-body');
+    clearChildren(body);
+
+    var tasks = getTasksRaw() || [];
+    var idMap = new Map();
+    tasks.forEach(function (t) { if (t) idMap.set(idOf(t), t); });
+
+    var t = state.selectedId !== null ? idMap.get(state.selectedId) : null;
+    if (!t) {
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = '';
+
+    body.appendChild(fieldRow('id', null, simpleValueNode(String(idOf(t)))));
+    body.appendChild(fieldRow('title', null, simpleValueNode(t.title || '정보 없음')));
+    body.appendChild(fieldRow('status', null, simpleValueNode(t.status || '정보 없음')));
+    if (!isNullish(t.phase)) {
+      body.appendChild(fieldRow('phase', null,
+        simpleValueNode(t.phase + (t.phase_title ? (' (' + t.phase_title + ')') : ''))));
+    }
+
+    var summary = pickField(t, ['summary', 'description']);
+    body.appendChild(fieldRow('summary', summary ? summary.key : null,
+      simpleValueNode(summary ? String(summary.value) : '정보 없음')));
+
+    var doneWhen = pickField(t, ['done_when', 'acceptance_criteria']);
+    body.appendChild(fieldRow('done_when', doneWhen ? doneWhen.key : null,
+      doneWhen && Array.isArray(doneWhen.value)
+        ? listValueNode(doneWhen.value, function (item) { return textEl('li', String(item)); })
+        : simpleValueNode(doneWhen ? String(doneWhen.value) : '미지정')));
+
+    var deps = pickField(t, ['deps', 'depends_on']);
+    body.appendChild(fieldRow('deps', deps ? deps.key : null,
+      deps && Array.isArray(deps.value)
+        ? listValueNode(deps.value, function (id) { return depRefNode(id, idMap); })
+        : textEl('span', '없음', 'muted')));
+
+    var parent = pickField(t, ['parent']);
+    if (parent) {
+      var pTask = idMap.get(parent.value);
+      body.appendChild(fieldRow('parent', null,
+        pTask
+          ? simpleValueNode(parent.value + (pTask.title ? (' — ' + pTask.title) : ''))
+          : textEl('span', parent.value + ' — 존재하지 않는 참조', 'err-ref')));
+    } else {
+      body.appendChild(fieldRow('parent', null, textEl('span', '미지정', 'muted')));
+    }
+
+    var doc = pickField(t, ['doc']);
+    var docNode = document.createElement('div');
+    docNode.appendChild(simpleValueNode(doc ? String(doc.value) : '정보 없음'));
+    if (doc) {
+      var openBtn = textEl('button', '문서 내용 보기');
+      openBtn.style.marginLeft = '10px';
+      openBtn.addEventListener('click', function () { openDocFor(String(doc.value)); });
+      docNode.appendChild(openBtn);
+    }
+    body.appendChild(fieldRow('doc', null, docNode));
+
+    if (state.docViewText !== null || state.docViewMissing !== null) {
+      var docView = textEl('div', null, 'doc-view');
+      if (state.docViewMissing) {
+        docView.appendChild(textEl('div', state.docViewMissing, 'banner warn'));
+      } else {
+        docView.appendChild(textEl('div', '문서: ' + state.docViewLabel, 'muted'));
+        var pre = document.createElement('pre');
+        pre.textContent = state.docViewText;
+        docView.appendChild(pre);
+      }
+      body.appendChild(docView);
+    }
+
+    var where = pickField(t, ['where', 'related_files']);
+    body.appendChild(fieldRow('where', where ? where.key : null,
+      where && Array.isArray(where.value)
+        ? listValueNode(where.value, function (item) {
+            if (item && typeof item === 'object') {
+              return textEl('li', (item.path || '?') + (item.reason ? (' — ' + item.reason) : ''));
+            }
+            return textEl('li', String(item));
+          })
+        : simpleValueNode(where ? String(where.value) : '정보 없음')));
+
+    var estMin = pickField(t, ['est_min', 'estimated_minutes']);
+    body.appendChild(fieldRow('est_min', estMin ? estMin.key : null,
+      simpleValueNode(estMin ? (estMin.value + '분') : '미지정')));
+
+    var gate = pickField(t, ['gate']);
+    var gateNode;
+    if (gate) {
+      var pre2 = document.createElement('pre');
+      pre2.textContent = typeof gate.value === 'string' ? gate.value : JSON.stringify(gate.value, null, 2);
+      gateNode = pre2;
+    } else {
+      gateNode = textEl('span', '미지정', 'muted');
+    }
+    body.appendChild(fieldRow('gate', null, gateNode));
+    if (gate) {
+      body.appendChild(textEl('div',
+        '※ gate 값은 표시용 텍스트일 뿐이며 이 화면에서 명령으로 실행되지 않습니다.',
+        'muted'));
+    }
+
+    var owner = pickField(t, ['owner']);
+    body.appendChild(fieldRow('owner', null, simpleValueNode(owner ? String(owner.value) : '미지정')));
+
+    var claimedAt = pickField(t, ['claimed_at']);
+    body.appendChild(fieldRow('claimed_at', null, simpleValueNode(claimedAt ? String(claimedAt.value) : '미지정')));
+
+    var updatedAt = pickField(t, ['updated_at']);
+    body.appendChild(fieldRow('updated_at', null, simpleValueNode(updatedAt ? String(updatedAt.value) : '정보 없음')));
+
+    var log = pickField(t, ['log', 'feedback_log']);
+    body.appendChild(fieldRow('log', log ? log.key : null,
+      log && Array.isArray(log.value)
+        ? listValueNode(log.value, function (entry) {
+            var li = document.createElement('li');
+            if (entry && typeof entry === 'object') {
+              li.appendChild(textEl('strong', entry.date || '(날짜 없음)'));
+              li.appendChild(document.createTextNode(' — ' + (entry.text || '')));
+            } else {
+              li.textContent = String(entry);
+            }
+            return li;
+          })
+        : textEl('span', '없음', 'muted')));
+
+    // done_at / evidence: 실제로 존재할 때만 표시
+    var doneAt = pickField(t, ['done_at']);
+    if (doneAt) {
+      body.appendChild(fieldRow('done_at', null, simpleValueNode(String(doneAt.value))));
+    }
+    var evidence = pickField(t, ['evidence']);
+    if (evidence) {
+      var evNode = Array.isArray(evidence.value)
+        ? listValueNode(evidence.value, function (item) { return textEl('li', String(item)); })
+        : simpleValueNode(String(evidence.value));
+      body.appendChild(fieldRow('evidence', null, evNode));
+    }
+
+    // 매핑되지 않은 나머지 필드
+    var extraKeys = Object.keys(t).filter(function (k) { return CANONICAL_KEYS.indexOf(k) === -1; });
+    if (extraKeys.length > 0) {
+      var details = document.createElement('details');
+      details.className = 'extra-fields';
+      var summaryEl = document.createElement('summary');
+      summaryEl.textContent = '기타 필드 (' + extraKeys.length + '개)';
+      details.appendChild(summaryEl);
+      extraKeys.forEach(function (k) {
+        var val = t[k];
+        var text = (val && typeof val === 'object') ? JSON.stringify(val, null, 2) : String(val);
+        details.appendChild(fieldRow(k, null, (function () {
+          var pre = document.createElement('pre');
+          pre.textContent = text;
+          return pre;
+        })()));
+      });
+      body.appendChild(details);
+    }
+  }
+
+  function openDocFor(docPath) {
+    var basename = docPath.split('/').pop();
+    var file = state.docsFiles.get(docPath) || state.docsFiles.get(basename);
+    if (!file) {
+      state.docViewText = null;
+      state.docViewLabel = null;
+      state.docViewMissing =
+        '연결된 문서 파일을 찾을 수 없습니다 ("' + docPath + '"). ' +
+        '상단의 "문서(.md) 파일 연결…"로 backlog 폴더의 .md 파일들을 선택하세요.';
+      render();
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      state.docViewText = String(reader.result);
+      state.docViewLabel = file.name;
+      state.docViewMissing = null;
+      render();
+    };
+    reader.onerror = function () {
+      state.docViewMissing = '문서 파일을 읽는 중 오류가 발생했습니다.';
+      render();
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
