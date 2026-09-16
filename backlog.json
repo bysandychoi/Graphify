@@ -276,6 +276,12 @@
           "path": "docs/virtual_schema/eqp_step_run_spec.md",
           "reason": "가상 eqp_step/run_spec 스키마 정의 산출물(이 문서)"
         }
+      ],
+      "feedback_log": [
+        {
+          "date": "2026-09-16",
+          "text": "리뷰(라운드1): AC(동일 step·resource별 상이 설비집합)는 L27/L37-39/L46-47로 충족. 그러나 [심각] L10-13 'run_spec은 최상위 사양, eqp_step이 그 아래'는 problem.md 37('run_spec과 eqp_step은 전체 사양이며' — 병렬 나열)에 없는 계층 관계를 미확인 표기 없이 단정 = 회사 구조 추정 확정. 헤더 면책(L3-6)은 필드/키/값 체계만 덮고 관계는 안 덮음. [심각] eqp_step 한 행이 (resource x eligible_eqp_ids) 곱집합 쌍과 동치인지 미정의 — L66-69가 스스로 T020/T044를 지목하면서 '(eqp,resource)가 eqp_step에 있다'의 판정 의미를 안 정함. lot_data.md는 '쌍의 임의 조합 금지'인데 여기 표현은 행 내부가 곱집합이라 비대칭. 충돌 탐지 구현 불가. [중] 유일성 키를 (process,step,resource) 3중으로 확정(L31)해놓고 L27에서 같은 step_id가 여러 process에 나타날 수 있다고 인정 → lot_data엔 process 없음(L60-65) → step 단독 조회는 다행 반환으로 비결정인데 그 귀결을 무언급. 조인키 미확정 문구는 넣었으나 구조적 모호성은 그대로. [중] L31-35 중복 행: '정책을 정하지 않는다'면서 '오류로 보고한다는 원칙'을 세우고 근거를 problem.md 7절 lot-eqp_step 불일치(=lot 우선 유지+충돌 표시)에 오인용. 중복 ID는 problem.md 144에서 정책 미확정으로 분류됨. 자기모순. [중] 빈 eligible_eqp_ids(L29)를 유효로 선언했으나 '행 자체가 없음'과 의미가 같은지 다른지 미언급(명시적 불가 vs 미정의는 충돌 판정 결과가 갈림). [중] eligible_eqp_ids가 참조하는 eqp id의 정의처가 어느 스키마 문서에도 없음(resource_id만 resource_data.md로 라우팅; 백로그엔 T012 생성 로직뿐). L70 문장도 resource_id를 eligible_eqp_ids에 넣는 것처럼 잘못 서술. [경] 파일명이 run_spec을 약속하지만 필드 0개이고 어느 후속 작업/미결 항목으로 넘기는지 미지정 — 백로그에 run_spec 전용 작업 없음. [경] L14-17 'lot이 참조할 때만 조회'는 problem.md 10절 '사양 보존 단위·연결 탐색 범위 미결'(T069)을 1-hop으로 임의 축소. [경] T006 지적 (b) 미반영 — L1 제목 '(T007)', L68 '별도 작업(T020,T044)' 은 경로 없이 백로그 번호만 하드코딩. (c)(직렬화)와 (d)(미존재 id)는 반영 확인."
+        }
       ]
     },
     {
