@@ -620,7 +620,7 @@
       "phase_title": "가상 데이터 생성기",
       "title": "설비·resource 마스터 생성 로직",
       "description": "설비 80대, resource 24개, 설비별 층 배정을 생성한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T012.md",
       "estimated_minutes": 30,
       "depends_on": [
