@@ -1,6 +1,0 @@
-{
-  "max_file_lines": 500,
-  "max_function_lines": 60,
-  "warn_ratio": 0.85,
-  "scope": "*.py"
-}

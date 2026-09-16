@@ -1,5 +1,0 @@
-__pycache__/
-*.pyc
-
-# 세션별 임시 상태 (공유 규칙 아님)
-.claude/state/
