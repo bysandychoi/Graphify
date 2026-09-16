@@ -90,7 +90,13 @@ def main():
         return
 
     subject, message = _build_message(current, prev_status, newly_done)
-    commit = run(["git", "commit", "-m", message])
+    # --only: 인덱스에 다른 경로의 변경(예: 별도 프로세스가 실수로 스테이징한
+    # 삭제)이 섞여 있어도 이 커밋에는 TRACKED_PATHS만 반영한다. 이 플래그
+    # 없이 그냥 "git commit"을 쓰면 인덱스 전체가 커밋되므로, 인덱스가
+    # 오염된 상태에서 "Update backlog.json"이라는 무해한 메시지로 무관한
+    # 파일들이 통째로 삭제되는 커밋이 만들어질 수 있다(실제로 한 번
+    # 발생했다 — 커밋 9754ce4).
+    commit = run(["git", "commit", "--only", "-m", message, "--"] + TRACKED_PATHS)
     if commit.returncode != 0:
         _report(f"backlog 자동 커밋 실패: {commit.stderr.strip()}")
         return
