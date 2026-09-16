@@ -157,6 +157,84 @@
     max-height: 400px;
     overflow: auto;
   }
+  tbody tr.phase-group td {
+    background: #f0f1f5;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+    padding-top: 10px;
+    cursor: default;
+  }
+  tbody tr.phase-group:hover { background: #f0f1f5; }
+  .target-date { white-space: nowrap; }
+  .target-date .milestone { display: block; color: var(--muted); font-size: 11px; }
+  .gantt-row {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .gantt-row .g-label { font-size: 12px; }
+  .gantt-row .g-label .n { color: var(--muted); }
+  .gantt-track {
+    position: relative;
+    height: 22px;
+    background: repeating-linear-gradient(
+      to right, #eceef2 0, #eceef2 1px, transparent 1px, transparent calc(100% / 6)
+    );
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .gantt-bar {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    border-radius: 3px;
+    background: #dbe4ff;
+    border: 1px solid #a7bdfb;
+    overflow: hidden;
+  }
+  .gantt-bar .fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--accent);
+    opacity: .55;
+  }
+  .gantt-bar .label {
+    position: relative;
+    font-size: 11px;
+    line-height: 18px;
+    padding: 0 6px;
+    color: #1f2937;
+    white-space: nowrap;
+  }
+  .gantt-today {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 0;
+    border-left: 2px dashed var(--danger);
+  }
+  .gantt-axis {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .gantt-axis .g-cols {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .gantt-axis .g-cols div {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 4px;
+  }
   #detail-panel {
     position: sticky;
     top: 16px;
@@ -204,6 +282,16 @@
     <div id="validation-body"></div>
   </section>
 
+  <section class="panel" id="gantt-panel" style="display:none;">
+    <h2>일정 (Gantt)</h2>
+    <div class="muted" style="margin-bottom:8px;">
+      단계(phase)별로 목표 날짜 구간과 완료 비율을 보여준다. 목표 날짜는
+      backlog.json에 있는 값이 아니라, 2026-09-17에 정한 일정을 이
+      화면에서 T번호 구간으로 환산해 참고용으로 보여주는 것이다.
+    </div>
+    <div id="gantt-body"></div>
+  </section>
+
   <div class="layout" id="list-detail-layout" style="display:none;">
     <section class="panel" id="list-panel">
       <h2>작업 목록</h2>
@@ -219,7 +307,7 @@
       <div style="overflow-x:auto; margin-top:10px;">
         <table>
           <thead>
-            <tr><th>ID</th><th>제목</th><th>상태</th><th>단계</th><th>예상 소요</th><th>문서</th></tr>
+            <tr><th>ID</th><th>제목</th><th>상태</th><th>목표 날짜</th><th>예상 소요</th><th>문서</th></tr>
           </thead>
           <tbody id="task-tbody"></tbody>
         </table>
@@ -264,6 +352,45 @@
   var $ = function (id) { return document.getElementById(id); };
 
   function isNullish(v) { return v === null || v === undefined; }
+
+  // ---------------------------------------------------------------------
+  // 일정(목표 날짜) — problem.md 9절 목표(2026-09-21)에 맞춘 하루 단위
+  // 계획을 T001~T083 번호 구간에 대응시킨 것. 사용자가 2026-09-17에 준
+  // 일정을 그대로 반영한다. backlog.json 자체에는 날짜 필드가 없으므로
+  // 이 표는 이 대시보드 화면에서만 참고용으로 계산해 보여준다(파일에
+  // 쓰지 않음).
+  // ---------------------------------------------------------------------
+  var SCHEDULE = [
+    { date: '2026-09-16', label: '기반 정리', ranges: [[1, 5]] },
+    { date: '2026-09-17', label: '가상 스키마와 첫 분석', ranges: [[6, 24], [26, 31], [68, 78]] },
+    { date: '2026-09-18', label: '후보 비교에서 최종 출력까지', ranges: [[33, 54]] },
+    { date: '2026-09-19', label: '큰 가상 데이터 및 회사 환경 첫 실행', ranges: [[25, 25], [32, 32], [55, 67], [79, 82]] },
+    { date: '2026-09-20', label: '회사 데이터 차이와 인수인계 보완', ranges: [] },
+    { date: '2026-09-21', label: '최종 실행·완료 판정', ranges: [[83, 83]] }
+  ];
+
+  function taskIdNumber(id) {
+    var m = /^T0*(\d+)$/.exec(String(id || ''));
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function scheduleFor(id) {
+    var n = taskIdNumber(id);
+    if (n === null) return null;
+    for (var i = 0; i < SCHEDULE.length; i++) {
+      var ranges = SCHEDULE[i].ranges;
+      for (var j = 0; j < ranges.length; j++) {
+        if (n >= ranges[j][0] && n <= ranges[j][1]) return SCHEDULE[i];
+      }
+    }
+    return null;
+  }
+
+  function phaseSortKey(phase) {
+    if (isNullish(phase) || phase === '') return [1, '(단계 없음)'];
+    var m = /^P0*(\d+)$/.exec(String(phase));
+    return m ? [0, parseInt(m[1], 10)] : [0.5, String(phase)];
+  }
 
   function fmtDateTime(d) {
     if (!d) return '';
@@ -455,6 +582,7 @@
 
     $('stats-panel').style.display = hasUsableData ? '' : 'none';
     $('validation-panel').style.display = hasUsableData ? '' : 'none';
+    $('gantt-panel').style.display = hasUsableData ? '' : 'none';
     $('list-detail-layout').style.display = hasUsableData ? '' : 'none';
 
     if (!hasUsableData) {
@@ -463,6 +591,7 @@
 
     renderStats(tasks);
     renderValidation(tasks);
+    renderGantt(tasks);
     renderStatusOptions(tasks);
     renderTaskTable();
     renderDetail();
@@ -592,6 +721,33 @@
     if (sel.value !== current) { state.filterStatus = ''; sel.value = ''; }
   }
 
+  function targetDateNode(t) {
+    var sched = scheduleFor(idOf(t));
+    if (!sched) return textEl('span', '미지정', 'muted');
+    var wrap = document.createElement('span');
+    wrap.className = 'target-date';
+    wrap.appendChild(document.createTextNode(sched.date));
+    wrap.appendChild(textEl('small', sched.label, 'milestone'));
+    return wrap;
+  }
+
+  function groupByPhase(tasks) {
+    var groups = new Map();
+    tasks.forEach(function (t) {
+      var phase = (t && !isNullish(t.phase) && t.phase !== '') ? t.phase : null;
+      var key = phase === null ? '' : String(phase);
+      if (!groups.has(key)) groups.set(key, { phase: phase, phaseTitle: t.phase_title, items: [] });
+      groups.get(key).items.push(t);
+    });
+    var list = Array.from(groups.values());
+    list.sort(function (a, b) {
+      var ka = phaseSortKey(a.phase), kb = phaseSortKey(b.phase);
+      if (ka[0] !== kb[0]) return ka[0] - kb[0];
+      return ka[1] < kb[1] ? -1 : (ka[1] > kb[1] ? 1 : 0);
+    });
+    return list;
+  }
+
   function renderTaskTable() {
     var tbody = $('task-tbody');
     clearChildren(tbody);
@@ -608,27 +764,118 @@
       return;
     }
 
-    filtered.forEach(function (t) {
-      var tr = document.createElement('tr');
-      var id = idOf(t);
-      if (id === state.selectedId) tr.className = 'selected';
-      tr.appendChild(textEl('td', id !== undefined ? String(id) : '(id 없음)'));
-      tr.appendChild(textEl('td', t.title || '정보 없음'));
-      tr.appendChild(textEl('td', t.status || '정보 없음'));
-      tr.appendChild(textEl('td', t.phase || '미지정'));
-      var est = pickField(t, ['est_min', 'estimated_minutes']);
-      tr.appendChild(textEl('td', est ? (est.value + '분') : '미지정'));
-      tr.appendChild(textEl('td', t.doc || '미지정'));
-      tr.addEventListener('click', function () {
-        state.selectedId = id;
-        state.docViewText = null;
-        state.docViewLabel = null;
-        state.docViewMissing = null;
-        render();
-        $('detail-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    groupByPhase(filtered).forEach(function (group) {
+      var groupTr = document.createElement('tr');
+      groupTr.className = 'phase-group';
+      var groupTd = textEl('td',
+        (group.phase || '단계 없음') + (group.phaseTitle ? (' — ' + group.phaseTitle) : '') +
+        ' (' + group.items.length + '건)');
+      groupTd.colSpan = 6;
+      groupTr.appendChild(groupTd);
+      tbody.appendChild(groupTr);
+
+      group.items.forEach(function (t) {
+        var tr = document.createElement('tr');
+        var id = idOf(t);
+        if (id === state.selectedId) tr.className = 'selected';
+        tr.appendChild(textEl('td', id !== undefined ? String(id) : '(id 없음)'));
+        tr.appendChild(textEl('td', t.title || '정보 없음'));
+        tr.appendChild(textEl('td', t.status || '정보 없음'));
+        var dateTd = document.createElement('td');
+        dateTd.appendChild(targetDateNode(t));
+        tr.appendChild(dateTd);
+        var est = pickField(t, ['est_min', 'estimated_minutes']);
+        tr.appendChild(textEl('td', est ? (est.value + '분') : '미지정'));
+        tr.appendChild(textEl('td', t.doc || '미지정'));
+        tr.addEventListener('click', function () {
+          state.selectedId = id;
+          state.docViewText = null;
+          state.docViewLabel = null;
+          state.docViewMissing = null;
+          render();
+          $('detail-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        tbody.appendChild(tr);
       });
-      tbody.appendChild(tr);
     });
+  }
+
+  // ---------------------------------------------------------------------
+  // Gantt (단계별 목표 날짜 구간 + 완료 비율)
+  // ---------------------------------------------------------------------
+
+  function isDoneStatus(status) { return status === 'done'; }
+
+  function renderGantt(tasks) {
+    var body = $('gantt-body');
+    clearChildren(body);
+
+    var axis = textEl('div', null, 'gantt-axis');
+    axis.appendChild(textEl('div', ''));
+    var cols = textEl('div', null, 'g-cols');
+    SCHEDULE.forEach(function (s) {
+      cols.appendChild(textEl('div', s.date + ' ' + s.label));
+    });
+    axis.appendChild(cols);
+    body.appendChild(axis);
+
+    var rangeStart = new Date(SCHEDULE[0].date + 'T00:00:00');
+    var rangeEnd = new Date(SCHEDULE[SCHEDULE.length - 1].date + 'T23:59:59');
+    var totalMs = rangeEnd.getTime() - rangeStart.getTime();
+    var today = new Date();
+
+    var groups = groupByPhase(tasks).filter(function (g) { return g.phase !== null; });
+
+    if (groups.length === 0) {
+      body.appendChild(textEl('div', '단계(phase) 정보가 있는 작업이 없어 Gantt를 그릴 수 없습니다.', 'muted'));
+      return;
+    }
+
+    groups.forEach(function (group) {
+      var dated = group.items
+        .map(function (t) { return { t: t, sched: scheduleFor(idOf(t)) }; })
+        .filter(function (x) { return x.sched; });
+      if (dated.length === 0) return;
+
+      var dates = dated.map(function (x) { return new Date(x.sched.date + 'T00:00:00'); });
+      var minDate = new Date(Math.min.apply(null, dates));
+      var maxDate = new Date(Math.max.apply(null, dates.map(function (d) { return d.getTime() + 24 * 3600 * 1000 - 1; })));
+      var doneCount = dated.filter(function (x) { return isDoneStatus(x.t.status); }).length;
+
+      var left = ((minDate.getTime() - rangeStart.getTime()) / totalMs) * 100;
+      var width = ((maxDate.getTime() - minDate.getTime()) / totalMs) * 100;
+      var fillPct = dated.length ? Math.round((doneCount / dated.length) * 100) : 0;
+
+      var row = textEl('div', null, 'gantt-row');
+      var labelNode = document.createElement('div');
+      labelNode.className = 'g-label';
+      labelNode.appendChild(document.createTextNode((group.phase || '') + (group.phaseTitle ? (' ' + group.phaseTitle) : '')));
+      labelNode.appendChild(textEl('span', ' (' + doneCount + '/' + dated.length + ')', 'n'));
+      row.appendChild(labelNode);
+
+      var track = textEl('div', null, 'gantt-track');
+      var bar = textEl('div', null, 'gantt-bar');
+      bar.style.left = Math.max(0, left) + '%';
+      bar.style.width = Math.max(2, width) + '%';
+      var fill = textEl('div', null, 'fill');
+      fill.style.width = fillPct + '%';
+      bar.appendChild(fill);
+      bar.appendChild(textEl('div', dated.length + '건 · ' + fillPct + '% 완료', 'label'));
+      track.appendChild(bar);
+
+      if (today >= rangeStart && today <= rangeEnd) {
+        var marker = textEl('div', null, 'gantt-today');
+        marker.style.left = (((today.getTime() - rangeStart.getTime()) / totalMs) * 100) + '%';
+        track.appendChild(marker);
+      }
+
+      row.appendChild(track);
+      body.appendChild(row);
+    });
+
+    var legend = textEl('div', '점선 = 오늘. 막대는 해당 단계 작업들의 목표 날짜 최소~최대 구간, 채워진 부분은 done 비율.', 'muted');
+    legend.style.marginTop = '6px';
+    body.appendChild(legend);
   }
 
   // ---------------------------------------------------------------------
@@ -715,6 +962,7 @@
       body.appendChild(fieldRow('phase', null,
         simpleValueNode(t.phase + (t.phase_title ? (' (' + t.phase_title + ')') : ''))));
     }
+    body.appendChild(fieldRow('목표 날짜', null, targetDateNode(t)));
 
     var summary = pickField(t, ['summary', 'description']);
     body.appendChild(fieldRow('summary', summary ? summary.key : null,
