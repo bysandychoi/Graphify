@@ -398,6 +398,10 @@
         {
           "path": "backlog/T008.md",
           "reason": "T008(resource_data 스키마 정의)는 참고용. 가상 스키마 문서 작성 방식 및 미확정 사항 표시 방법의 선례"
+        },
+        {
+          "path": "docs/virtual_schema/location_floor.md",
+          "reason": "가상 위치·층 연결 스키마 정의 산출물(이 문서)"
         }
       ]
     },
