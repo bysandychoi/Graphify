@@ -271,6 +271,10 @@
         {
           "path": "backlog/T006.md",
           "reason": "완료된 lot_data 스키마 작업. 문서 작성 방식과 주의사항 참고, T007과의 선후 관계 확인"
+        },
+        {
+          "path": "docs/virtual_schema/eqp_step_run_spec.md",
+          "reason": "가상 eqp_step/run_spec 스키마 정의 산출물(이 문서)"
         }
       ]
     },
