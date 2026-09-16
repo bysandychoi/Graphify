@@ -241,7 +241,7 @@
       "phase_title": "가상 스키마 정의 (회사 스키마와 구분)",
       "title": "가상 eqp_step / run_spec 스키마 정의",
       "description": "공정·step별 resource-설비 가능 관계 전체 사양을 표현하는 가상 스키마를 정의한다.",
-      "status": "todo",
+      "status": "in_progress",
       "doc": "backlog/T007.md",
       "estimated_minutes": 30,
       "depends_on": [],
