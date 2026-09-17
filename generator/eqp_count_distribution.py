@@ -31,34 +31,33 @@ T014(generator/lot_data.py)의 generate_lot_data는 lot마다 무작위로
 규칙이라, 같은 분포를 어떤 키 순서로 적어도 같은 seed에서 같은
 결과가 나온다.
 
-**주의 (T017 관련):** 이 함수는 유효 lot 수 **전부**를
-`eligible_eqp_count_distribution`에 배정한다. config.md는 이후
-`rare_eligible_eqp_count_types`(T017)가 일부 값을 절대 건수로 먼저
-떼어가고 "나머지"만 이 분포가 배정한다고 정했다 — 그 분리는 아직
-구현하지 않았다. T017을 구현할 때 이 함수(또는 그 앞단)를 바꿔
-`rare_eligible_eqp_count_types`가 차지한 lot 수만큼 뺀 "나머지 lot
-수"를 여기 넘기도록 해야 한다.
+이 모듈은 `eligible_eqp_count_distribution`이 유효 lot 수 **전부**를
+배정하는 경우만 다룬다. `rare_eligible_eqp_count_types`(T017,
+`generator/rare_eqp_count_types.py`)가 함께 켜지면, 그 모듈이 먼저
+절대 건수를 떼어내고 "나머지"만 이 모듈의 `allocate_target_counts`에
+넘긴다 — `build_pairs_cache`/`make_lot_for_target`을 그대로 재사용해
+(process,step) 탐색 로직이 두 곳에서 갈라지지 않게 한다.
 """
 import re
 import random
+from decimal import Decimal
 
-from generator._util import LOT_ID_WIDTH, check_no_duplicates, effective_lot_count, scaled_count
+from generator._util import LOT_ID_WIDTH, check_no_duplicates, effective_lot_count
 from generator.lot_data import build_candidate_pairs
 
-_VALUE_KEY_RE = re.compile(r"^[0-9]+$")
+VALUE_KEY_RE = re.compile(r"^[0-9]+$")
 
 
-def _parse_value_key(key, max_value: int) -> int:
-    if not isinstance(key, str) or not _VALUE_KEY_RE.fullmatch(key):
+def parse_value_key(
+    key, max_value: int, *, field_name: str = "eligible_eqp_count_distribution"
+) -> int:
+    if not isinstance(key, str) or not VALUE_KEY_RE.fullmatch(key):
         raise ValueError(
-            f"eligible_eqp_count_distribution key must be a non-negative decimal "
-            f"integer string, got {key!r}"
+            f"{field_name} key must be a non-negative decimal integer string, got {key!r}"
         )
     value = int(key)
     if value > max_value:
-        raise ValueError(
-            f"eligible_eqp_count_distribution key {value} exceeds scale.eqp_count ({max_value})"
-        )
+        raise ValueError(f"{field_name} key {value} exceeds scale.eqp_count ({max_value})")
     return value
 
 
@@ -68,18 +67,17 @@ def allocate_target_counts(
     """{"1": 0.2, "2": 0.6, "3": 0.2} 같은 분포를 받아, 길이가
     lot_count인 목표 eligible_eqp_count 리스트를 만든다(순서는 뒤섞임).
     비율 합은 1이어야 한다(config.md 정적 검증과 같은 기준). 배정
-    방식은 이 모듈 docstring의 "최대 잔여법" 참고."""
+    방식은 이 모듈 docstring의 "최대 잔여법" 참고. lot_count가 0이면
+    빈 리스트를 돌려준다(distribution 검증은 그대로 수행한다)."""
     if not distribution:
         raise ValueError("distribution must not be empty")
     ratio_sum = sum(distribution.values())
     if abs(ratio_sum - 1.0) > 1e-9:
         raise ValueError(f"distribution ratios must sum to 1, got {ratio_sum}")
 
-    from decimal import Decimal  # pylint: disable=import-outside-toplevel
-
     exact = {}
     for key, ratio in distribution.items():
-        value = _parse_value_key(key, max_value)
+        value = parse_value_key(key, max_value)
         if ratio < 0:
             raise ValueError(f"ratio for {key!r} must be >= 0, got {ratio}")
         exact[value] = Decimal(str(lot_count)) * Decimal(str(ratio))
@@ -100,7 +98,7 @@ def allocate_target_counts(
     return allocation
 
 
-def _build_pairs_cache(process_ids: list, step_ids: list, eqp_step_rows: list) -> dict:
+def build_pairs_cache(process_ids: list, step_ids: list, eqp_step_rows: list) -> dict:
     # (process,step) 조합별 candidate_pairs를 한 번만 계산해 재사용한다
     # — lot마다 다시 계산하면 lot 수 x 조합 수만큼 eqp_step_rows를
     # 훑게 되어 대규모 데이터에서 매우 느려진다(리뷰에서 실측: 3,000
@@ -111,7 +109,7 @@ def _build_pairs_cache(process_ids: list, step_ids: list, eqp_step_rows: list) -
     }
 
 
-def _make_lot_for_target(
+def make_lot_for_target(
     target: int, step_ids: list, pairs_cache: dict, qualifying_cache: dict, rng: random.Random
 ):
     if target == 0:
@@ -129,10 +127,13 @@ def _make_lot_for_target(
         ]
     combos = qualifying_cache[target]
     if not combos:
+        # 이 함수는 eligible_eqp_count_distribution(T015)과
+        # rare_eligible_eqp_count_types(T017)가 공유하므로 특정
+        # case_ratios 필드명을 메시지에 박지 않는다 — 어느 쪽이 이
+        # target을 요청했는지는 호출자만 안다.
         raise ValueError(
             f"no (process, step) combination in eqp_step provides "
-            f"eligible_eqp_count >= {target}; "
-            "case_ratios.eligible_eqp_count_distribution asks for a value "
+            f"eligible_eqp_count >= {target}; a configured target value "
             "eqp_step cannot supply"
         )
     process_id, step_id = rng.choice(combos)
@@ -142,6 +143,36 @@ def _make_lot_for_target(
     return step_id, [p for p in full_pairs if p["eqp"] in chosen]
 
 
+def lots_from_targets(
+    targets: list, *, process_ids: list, step_ids: list, eqp_step_rows: list,
+    rng: random.Random,
+) -> list:
+    """목표 eligible_eqp_count 리스트(순서 = lot 순번)를 받아 실제
+    lot_data 행 리스트를 만든다. generate_lot_data_with_distribution과
+    T017(generator/rare_eqp_count_types.py)이 공유하는 조립 단계다."""
+    pairs_cache = build_pairs_cache(process_ids, step_ids, eqp_step_rows)
+    qualifying_cache = {}
+    lots = []
+    for i, target in enumerate(targets, start=1):
+        step_id, pairs = make_lot_for_target(target, step_ids, pairs_cache, qualifying_cache, rng)
+        lots.append({
+            "lot_id": f"LOT_V{i:0{LOT_ID_WIDTH}d}",
+            "current_step": step_id,
+            "candidate_pairs": pairs,
+            "attributes": {},
+        })
+    return lots
+
+
+def check_process_and_step_ids(process_ids: list, step_ids: list) -> None:
+    if not process_ids:
+        raise ValueError("process_ids must not be empty")
+    if not step_ids:
+        raise ValueError("step_ids must not be empty")
+    check_no_duplicates(process_ids, "process_ids")
+    check_no_duplicates(step_ids, "step_ids")
+
+
 def generate_lot_data_with_distribution(
     config: dict, *, process_ids: list, step_ids: list, eqp_step_rows: list,
     distribution: dict, rng: random.Random = None,
@@ -149,30 +180,15 @@ def generate_lot_data_with_distribution(
     """rng를 안 넘기면 이 함수가 새 random.Random(config["seed"])을 만든다 —
     단독/테스트 호출용 편의이며, 실제 파이프라인은 앞 단계가 쓰던 rng를
     그대로 이어받아 넘긴다."""
-    if not process_ids:
-        raise ValueError("process_ids must not be empty")
-    if not step_ids:
-        raise ValueError("step_ids must not be empty")
-    check_no_duplicates(process_ids, "process_ids")
-    check_no_duplicates(step_ids, "step_ids")
+    check_process_and_step_ids(process_ids, step_ids)
     if rng is None:
         rng = random.Random(config["seed"])
 
     lot_count = effective_lot_count(config)
     eqp_count = config["scale"]["eqp_count"]
     targets = allocate_target_counts(distribution, lot_count, rng, max_value=eqp_count)
-    pairs_cache = _build_pairs_cache(process_ids, step_ids, eqp_step_rows)
-    qualifying_cache = {}
-
-    lots = []
-    for i, target in enumerate(targets, start=1):
-        step_id, pairs = _make_lot_for_target(
-            target, step_ids, pairs_cache, qualifying_cache, rng
-        )
-        lots.append({
-            "lot_id": f"LOT_V{i:0{LOT_ID_WIDTH}d}",
-            "current_step": step_id,
-            "candidate_pairs": pairs,
-            "attributes": {},
-        })
+    lots = lots_from_targets(
+        targets, process_ids=process_ids, step_ids=step_ids,
+        eqp_step_rows=eqp_step_rows, rng=rng,
+    )
     return {"lot_data": lots}

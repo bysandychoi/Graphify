@@ -7,6 +7,7 @@ from generator.master import generate_master_data
 from generator.eqp_step import generate_eqp_step_data
 from generator.lot_data import generate_lot_data
 from generator._util import eligible_eqp_count
+from generator.rare_eqp_count_types import generate_lot_data_with_rare_types
 from generator.shared_eqp_case import has_shared_eqp_multi_resource
 
 CONFIG = {
@@ -47,6 +48,16 @@ class TestPipeline(unittest.TestCase):
         data = generate(config)
         counts = Counter(eligible_eqp_count(lot["candidate_pairs"]) for lot in data["lot_data"])
         self.assertEqual(counts, {1: 100, 2: 100})
+
+    def test_case_ratios_rare_eligible_eqp_count_types_carves_out_exact_count(self):
+        config = {**CONFIG, "case_ratios": {
+            "rare_eligible_eqp_count_types": {"5": {"min_count": 3, "max_count": 6}},
+            "eligible_eqp_count_distribution": {"1": 0.5, "2": 0.5},
+        }}
+        data = generate(config)
+        counts = Counter(eligible_eqp_count(lot["candidate_pairs"]) for lot in data["lot_data"])
+        self.assertEqual(counts[5], 3)
+        self.assertEqual(counts[1] + counts[2], 197)
 
     def test_without_case_ratios_falls_back_to_t014_behavior(self):
         self.assertNotIn("case_ratios", CONFIG)
@@ -197,6 +208,54 @@ class TestPipeline(unittest.TestCase):
         )
         expected = _merge_disjoint(master, {"eqp_step": eqp_step_result["eqp_step"]}, lot_data)
         self.assertEqual(generate(CONFIG), expected)
+
+    def test_rare_types_path_matches_manual_shared_rng_composition(self):
+        # 위 테스트와 같은 이유로, rare_eligible_eqp_count_types 분기도
+        # generate()가 실제로 rng를 이어서 쓰는지 직접 확인해야 한다 —
+        # 히스토그램만 보는 테스트는 이 분기가 매번 새 rng를 만들어도
+        # (T015 리뷰에서 실제로 그랬던 것처럼) 통과한다.
+        config = {**CONFIG, "case_ratios": {
+            "rare_eligible_eqp_count_types": {"5": {"min_count": 3, "max_count": 6}},
+            "eligible_eqp_count_distribution": {"1": 0.5, "2": 0.5},
+        }}
+        rng = random.Random(config["seed"])
+        master = generate_master_data(config, rng=rng)
+        eqp_ids = [r["eqp_id"] for r in master["eqp_floor"]]
+        resource_ids = [r["resource_id"] for r in master["resources"]]
+        eqp_step_result = generate_eqp_step_data(
+            config, eqp_ids=eqp_ids, resource_ids=resource_ids, rng=rng
+        )
+        lot_data = generate_lot_data_with_rare_types(
+            config,
+            process_ids=eqp_step_result["process_ids"],
+            step_ids=eqp_step_result["step_ids"],
+            eqp_step_rows=eqp_step_result["eqp_step"],
+            rare_types=config["case_ratios"]["rare_eligible_eqp_count_types"],
+            distribution=config["case_ratios"]["eligible_eqp_count_distribution"],
+            rng=rng,
+        )
+        expected = _merge_disjoint(master, {"eqp_step": eqp_step_result["eqp_step"]}, lot_data)
+        self.assertEqual(generate(config), expected)
+
+    def test_rare_types_combine_with_shared_eqp_multi_resource(self):
+        # config.md의 두 예시 config가 둘 다 rare_eligible_eqp_count_types와
+        # shared_eqp_multi_resource를 함께 켠다 — T016이 rare로 만든
+        # eligible_eqp_count(예: 5)를 보존한 채 shared를 주입할 수
+        # 있어야 한다.
+        config = {**CONFIG, "case_ratios": {
+            "rare_eligible_eqp_count_types": {"5": {"min_count": 3, "max_count": 6}},
+            "eligible_eqp_count_distribution": {"1": 0.5, "2": 0.5},
+            "shared_eqp_multi_resource": {"min_count": 5},
+        }}
+        data = generate(config)
+        counts = Counter(eligible_eqp_count(lot["candidate_pairs"]) for lot in data["lot_data"])
+        self.assertEqual(counts[5], 3)
+        self.assertEqual(counts[1] + counts[2], 197)
+        shared = sum(
+            1 for lot in data["lot_data"]
+            if has_shared_eqp_multi_resource(lot["candidate_pairs"])
+        )
+        self.assertGreaterEqual(shared, 5)
 
     def test_reproducible_end_to_end(self):
         self.assertEqual(generate(CONFIG), generate(CONFIG))

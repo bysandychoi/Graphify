@@ -12,6 +12,7 @@ from generator.master import generate_master_data
 from generator.eqp_step import generate_eqp_step_data
 from generator.lot_data import generate_lot_data
 from generator.eqp_count_distribution import generate_lot_data_with_distribution
+from generator.rare_eqp_count_types import generate_lot_data_with_rare_types
 from generator.shared_eqp_case import inject_shared_eqp_cases
 
 
@@ -35,15 +36,24 @@ def _case_ratios(config: dict) -> dict:
 
 def _generate_lot_data(config: dict, *, process_ids: list, step_ids: list,
                         eqp_step_rows: list, rng: random.Random) -> dict:
-    distribution = _case_ratios(config).get("eligible_eqp_count_distribution")
-    if distribution is None:
-        return generate_lot_data(
+    case_ratios = _case_ratios(config)
+    rare_types = case_ratios.get("rare_eligible_eqp_count_types")
+    distribution = case_ratios.get("eligible_eqp_count_distribution")
+
+    if rare_types is not None:
+        return generate_lot_data_with_rare_types(
             config, process_ids=process_ids, step_ids=step_ids,
-            eqp_step_rows=eqp_step_rows, rng=rng,
+            eqp_step_rows=eqp_step_rows, rare_types=rare_types,
+            distribution=distribution, rng=rng,
         )
-    return generate_lot_data_with_distribution(
+    if distribution is not None:
+        return generate_lot_data_with_distribution(
+            config, process_ids=process_ids, step_ids=step_ids,
+            eqp_step_rows=eqp_step_rows, distribution=distribution, rng=rng,
+        )
+    return generate_lot_data(
         config, process_ids=process_ids, step_ids=step_ids,
-        eqp_step_rows=eqp_step_rows, distribution=distribution, rng=rng,
+        eqp_step_rows=eqp_step_rows, rng=rng,
     )
 
 
