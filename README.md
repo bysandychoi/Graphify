@@ -1,5 +1,7 @@
 # Graphify
 
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/ccbb1cf3-dccc-4f42-8474-913d3e061a82" />
+
 제조 스케줄링/그래프 실험에 쓰는 원본 현장 데이터를, **원본의 lot–설비–
 resource 관계와 분포를 보존한 채로** 실험에 쓸 만한 작은 데이터로
 줄여 주는 도구다. 무작위로 새 데이터를 만들어내는 대신, 원본에서 lot을
