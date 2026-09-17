@@ -1,6 +1,12 @@
 import unittest
 
-from generator._util import effective_lot_count, eligible_eqp_count, round_half_up, scaled_count
+from generator._util import (
+    effective_lot_count,
+    eligible_eqp_count,
+    resolve_ratio_or_count,
+    round_half_up,
+    scaled_count,
+)
 
 
 class TestRoundHalfUp(unittest.TestCase):
@@ -56,6 +62,60 @@ class TestEligibleEqpCount(unittest.TestCase):
 
     def test_empty_pairs_is_zero(self):
         self.assertEqual(eligible_eqp_count([]), 0)
+
+
+class TestResolveRatioOrCount(unittest.TestCase):
+    def test_plain_number_is_a_ratio(self):
+        self.assertEqual(resolve_ratio_or_count(0.05, 10000), 500)
+
+    def test_ratio_only_object(self):
+        self.assertEqual(resolve_ratio_or_count({"ratio": 0.05}, 10000), 500)
+
+    def test_min_count_only_object_ignores_ratio(self):
+        self.assertEqual(resolve_ratio_or_count({"min_count": 20}, 10000), 20)
+
+    def test_ratio_below_min_count_uses_min_count(self):
+        # 0.001 * 10000 = 10 < min_count 20 -> 20으로 끌어올림.
+        self.assertEqual(resolve_ratio_or_count({"ratio": 0.001, "min_count": 20}, 10000), 20)
+
+    def test_ratio_above_min_count_uses_ratio(self):
+        self.assertEqual(resolve_ratio_or_count({"ratio": 0.05, "min_count": 20}, 10000), 500)
+
+    def test_rejects_empty_object(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({}, 10000)
+
+    def test_rejects_negative_ratio_or_min_count(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({"ratio": -0.1}, 10000)
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({"min_count": -1}, 10000)
+
+    def test_rejects_bool(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count(True, 10000)
+
+    def test_rejects_bool_min_count(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({"min_count": True}, 10000)
+
+    def test_rejects_non_integer_min_count(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({"min_count": 2.7}, 10000)
+
+    def test_rejects_ratio_above_one(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count(5, 10000)
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({"ratio": 1.5}, 10000)
+
+    def test_rejects_bool_ratio(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({"ratio": True}, 10000)
+
+    def test_rejects_unknown_keys(self):
+        with self.assertRaises(ValueError):
+            resolve_ratio_or_count({"ratio": 0.1, "mincount": 50}, 10000)
 
 
 if __name__ == "__main__":

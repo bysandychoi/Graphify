@@ -1,11 +1,21 @@
 """여러 generator 모듈이 함께 쓰는 자잘한 검증/계산 헬퍼."""
 from decimal import Decimal, ROUND_HALF_UP
 
+# lot_id의 고정 자릿수. master.py의 eqp_id/resource_id와 같은 이유로
+# lot_count 값과 무관하게 고정한다(lot_data.py, eqp_count_distribution.py
+# 둘 다 lot_id를 만들므로 여기서 한 번만 정의해 공유한다).
+LOT_ID_WIDTH = 4
+
 
 def positive_int(value, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ValueError(f"{name} must be a positive int, got {value!r}")
     return value
+
+
+def check_no_duplicates(ids: list, name: str) -> None:
+    if len(set(ids)) != len(ids):
+        raise ValueError(f"{name} must not contain duplicates")
 
 
 def round_half_up(value) -> int:
@@ -58,3 +68,40 @@ def eligible_eqp_count(candidate_pairs: list) -> int:
     """lot_data.md의 파생값 eligible_eqp_count: candidate_pairs의 중복
     없는 eqp 개수. 저장하지 않고 항상 candidate_pairs에서 계산한다."""
     return len({pair["eqp"] for pair in candidate_pairs})
+
+
+def _check_ratio(ratio) -> None:
+    if isinstance(ratio, bool) or not isinstance(ratio, (int, float)):
+        raise ValueError(f"ratio must be a number, got {ratio!r}")
+    if not 0 <= ratio <= 1:
+        raise ValueError(f"ratio must be within 0..1, got {ratio}")
+
+
+def _check_min_count(min_count) -> None:
+    if isinstance(min_count, bool) or not isinstance(min_count, int):
+        raise ValueError(f"min_count must be an int, got {min_count!r}")
+    if min_count < 0:
+        raise ValueError(f"min_count must be >= 0, got {min_count}")
+
+
+def resolve_ratio_or_count(spec, population: int) -> int:
+    """config.md "비율 또는 최소 건수" 공통 형식(전제 절)을 실제 목표
+    건수로 바꾼다. `spec`은 숫자(비율, 0~1)이거나
+    `{"ratio": ..., "min_count": ...}` 객체(둘 중 하나 이상)다. 반환값은
+    `max(round(ratio*population), min_count)` — ratio로 계산한 건수가
+    min_count보다 작을 때만 min_count로 끌어올린다는 규칙 그대로다."""
+    if isinstance(spec, (int, float)) and not isinstance(spec, bool):
+        _check_ratio(spec)
+        return scaled_count(spec, population) if spec else 0
+    if isinstance(spec, dict):
+        unknown = set(spec) - {"ratio", "min_count"}
+        if unknown:
+            raise ValueError(f"unknown keys in ratio-or-count spec: {sorted(unknown)}")
+        if "ratio" not in spec and "min_count" not in spec:
+            raise ValueError(f"ratio-or-count spec must have ratio and/or min_count: {spec!r}")
+        ratio = spec.get("ratio", 0)
+        min_count = spec.get("min_count", 0)
+        _check_ratio(ratio)
+        _check_min_count(min_count)
+        return max(scaled_count(ratio, population) if ratio else 0, min_count)
+    raise ValueError(f"invalid ratio-or-count spec: {spec!r}")

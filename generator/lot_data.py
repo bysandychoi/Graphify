@@ -28,14 +28,7 @@ dedupe한다.
 """
 import random
 
-from generator._util import effective_lot_count
-
-_LOT_ID_WIDTH = 4
-
-
-def _check_no_duplicates(ids: list, name: str) -> None:
-    if len(set(ids)) != len(ids):
-        raise ValueError(f"{name} must not contain duplicates")
+from generator._util import LOT_ID_WIDTH, check_no_duplicates, effective_lot_count
 
 
 def build_candidate_pairs(process_id: str, step_id: str, eqp_step_rows: list) -> list:
@@ -63,8 +56,8 @@ def generate_lot_data(
         raise ValueError("process_ids must not be empty")
     if not step_ids:
         raise ValueError("step_ids must not be empty")
-    _check_no_duplicates(process_ids, "process_ids")
-    _check_no_duplicates(step_ids, "step_ids")
+    check_no_duplicates(process_ids, "process_ids")
+    check_no_duplicates(step_ids, "step_ids")
     if rng is None:
         rng = random.Random(config["seed"])
     lot_count = effective_lot_count(config)
@@ -73,7 +66,7 @@ def generate_lot_data(
         process_id = rng.choice(process_ids)
         step_id = rng.choice(step_ids)
         lots.append({
-            "lot_id": f"LOT_V{i:0{_LOT_ID_WIDTH}d}",
+            "lot_id": f"LOT_V{i:0{LOT_ID_WIDTH}d}",
             "current_step": step_id,
             "candidate_pairs": build_candidate_pairs(process_id, step_id, eqp_step_rows),
             "attributes": {},

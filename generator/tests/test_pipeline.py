@@ -1,10 +1,13 @@
 import random
 import unittest
+from collections import Counter
 
 from generator.pipeline import _merge_disjoint, generate
 from generator.master import generate_master_data
 from generator.eqp_step import generate_eqp_step_data
 from generator.lot_data import generate_lot_data
+from generator._util import eligible_eqp_count
+from generator.shared_eqp_case import has_shared_eqp_multi_resource
 
 CONFIG = {
     "seed": 42,
@@ -36,6 +39,74 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(len(data["eqp_floor"]), 8)
         self.assertEqual(len(data["resources"]), 5)
         self.assertEqual(len(data["lot_data"]), 200)
+
+    def test_case_ratios_eligible_eqp_count_distribution_controls_histogram(self):
+        config = {**CONFIG, "case_ratios": {
+            "eligible_eqp_count_distribution": {"1": 0.5, "2": 0.5}
+        }}
+        data = generate(config)
+        counts = Counter(eligible_eqp_count(lot["candidate_pairs"]) for lot in data["lot_data"])
+        self.assertEqual(counts, {1: 100, 2: 100})
+
+    def test_without_case_ratios_falls_back_to_t014_behavior(self):
+        self.assertNotIn("case_ratios", CONFIG)
+        data = generate(CONFIG)
+        self.assertEqual(len(data["lot_data"]), 200)
+
+    def _natural_shared_count(self, config):
+        without = {k: v for k, v in config.items() if k != "case_ratios"}
+        data = generate(without)
+        return sum(
+            1 for lot in data["lot_data"]
+            if has_shared_eqp_multi_resource(lot["candidate_pairs"])
+        )
+
+    def test_case_ratios_shared_eqp_multi_resource_guarantees_minimum_count(self):
+        # CONFIG의 eqp 풀이 작아 이 성질이 자연적으로도 꽤 나온다 —
+        # min_count를 자연 발생 수보다 확실히 크게 잡아야, 주입이 실제로
+        # 뭔가 하고 있다는 걸 검증할 수 있다(그러지 않으면 주입 로직을
+        # 완전히 비활성화해도 이 테스트는 통과한다).
+        baseline = self._natural_shared_count(CONFIG)
+        target = baseline + 20
+        config = {**CONFIG, "case_ratios": {
+            "shared_eqp_multi_resource": {"min_count": target}
+        }}
+        data = generate(config)
+        shared = sum(
+            1 for lot in data["lot_data"]
+            if has_shared_eqp_multi_resource(lot["candidate_pairs"])
+        )
+        self.assertGreaterEqual(shared, target)
+        self.assertGreater(shared, baseline)
+
+    def test_shared_eqp_case_combines_with_eligible_eqp_count_distribution(self):
+        config_without_shared = {**CONFIG, "case_ratios": {
+            "eligible_eqp_count_distribution": {"1": 0.5, "2": 0.5},
+        }}
+        baseline_data = generate(config_without_shared)
+        baseline = sum(
+            1 for lot in baseline_data["lot_data"]
+            if has_shared_eqp_multi_resource(lot["candidate_pairs"])
+        )
+        target = baseline + 20
+
+        config = {**CONFIG, "case_ratios": {
+            "eligible_eqp_count_distribution": {"1": 0.5, "2": 0.5},
+            "shared_eqp_multi_resource": {"min_count": target},
+        }}
+        data = generate(config)
+        self.assertEqual(len(data["lot_data"]), 200)
+        shared = sum(
+            1 for lot in data["lot_data"]
+            if has_shared_eqp_multi_resource(lot["candidate_pairs"])
+        )
+        self.assertGreaterEqual(shared, target)
+        # T016이 T015의 히스토그램을 보존해야 한다: 주입 후에도
+        # eligible_eqp_count는 여전히 1 또는 2뿐이어야 한다(값을
+        # 유지한 채 shared 조합으로만 바꿔치기했다면).
+        counts = Counter(eligible_eqp_count(lot["candidate_pairs"]) for lot in data["lot_data"])
+        self.assertEqual(set(counts), {1, 2})
+        self.assertEqual(counts, {1: 100, 2: 100})
 
     def test_eqp_step_only_references_master_ids(self):
         data = generate(CONFIG)
